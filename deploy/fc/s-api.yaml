@@ -1,0 +1,50 @@
+edition: 3.0.0
+name: tripai-backend
+access: "tripai"
+
+vars:
+  region: "cn-hangzhou"
+
+resources:
+  tripai_api:
+    component: fc3
+    props:
+      region: ${vars.region}
+      functionName: tripai-api
+      runtime: custom.debian10
+      description: TripAI FastAPI backend (Aliyun FC)
+      timeout: 600
+      memorySize: 2048
+      cpu: 1.0
+      diskSize: 10240
+      code: ./api-code
+      customRuntimeConfig:
+        port: 9000
+        command:
+          - python3
+          - server.py
+      environmentVariables:
+        PYTHONPATH: /code/python
+        PATH: /code/python/bin:/var/fc/lang/python3.10/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        DATABASE_URL: ${env.DATABASE_URL}
+        JWT_SECRET_KEY: ${env.JWT_SECRET_KEY}
+        LLM_BASE_URL: ${env.LLM_BASE_URL}
+        LLM_API_KEY: ${env.LLM_API_KEY}
+        LLM_MODEL: ${env.LLM_MODEL}
+        LLM_TIMEOUT_SECONDS: ${env.LLM_TIMEOUT_SECONDS}
+        AMAP_WEB_KEY: ${env.AMAP_WEB_KEY}
+      triggers:
+        - triggerName: http
+          triggerType: http
+          description: TripAI HTTP trigger
+          qualifier: LATEST
+          triggerConfig:
+            authType: anonymous
+            disableURLInternet: false
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - HEAD
+              - OPTIONS
