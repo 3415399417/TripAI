@@ -28,7 +28,19 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return; // API calls pass through
 
   event.respondWith(
-    caches.match(request).then((cached) => {
+    // Navigations: network-first so users always get the newest page.
+    // Static assets: cache-first for speed.
+    if (request.mode === "navigate") {
+      return fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(() => caches.match(request).then((cached) => cached ?? caches.match("/")));
+    }
+
+    return caches.match(request).then((cached) => {
       if (cached) return cached;
       return fetch(request).then((response) => {
         const copy = response.clone();
@@ -37,8 +49,7 @@ self.addEventListener("fetch", (event) => {
           (request.destination === "script" ||
             request.destination === "style" ||
             request.destination === "image" ||
-            request.destination === "font" ||
-            request.mode === "navigate")
+            request.destination === "font")
         ) {
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
         }
@@ -47,4 +58,3 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
-

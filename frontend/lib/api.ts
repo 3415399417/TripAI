@@ -33,23 +33,28 @@ export function clearToken(): void {
   window.localStorage.removeItem("tripai_token");
 }
 
+interface ApiRequestOptions extends RequestInit {
+  timeoutMs?: number;
+}
+
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit = {}
+  options: ApiRequestOptions = {}
 ): Promise<T> {
+  const { timeoutMs = 45_000, ...fetchOptions } = options;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...((options.headers as Record<string, string>) ?? {}),
+    ...((fetchOptions.headers as Record<string, string>) ?? {}),
   };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 60_000);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   let res: Response;
   try {
     res = await fetch(`${API_BASE}${path}`, {
-      ...options,
+      ...fetchOptions,
       headers,
       signal: controller.signal,
     });
@@ -99,11 +104,13 @@ export const tripApi = {
     apiFetch<AIGenerateResponse>("/api/ai/generate-trip", {
       method: "POST",
       body: JSON.stringify(payload),
+      timeoutMs: 180_000,
     }),
   reoptimize: (tripId: number, instruction?: string) =>
     apiFetch<AIGenerateResponse>("/api/ai/reoptimize", {
       method: "POST",
       body: JSON.stringify({ trip_id: tripId, instruction: instruction ?? null }),
+      timeoutMs: 180_000,
     }),
   updateSchedule: (tripId: number, items: ScheduleUpsertItem[]) =>
     apiFetch<Trip>(`/api/trips/${tripId}/schedule`, {
