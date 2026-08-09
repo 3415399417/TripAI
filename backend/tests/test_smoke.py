@@ -1,7 +1,6 @@
 """Smoke tests for the core API flow (uses the mock LLM mode)."""
 
 import os
-import time
 
 os.environ["LLM_API_KEY"] = ""
 os.environ["DATABASE_URL"] = "sqlite:///./test_tripai.db"
@@ -59,23 +58,12 @@ def test_register_login_generate_trip() -> None:
         "interests": ["美食"],
     }
     gen = client.post("/api/ai/generate-trip", json=payload, headers=headers)
-    assert gen.status_code == 202, gen.text
+    assert gen.status_code == 200, gen.text
     data = gen.json()
     assert data["mock"] is True
+    assert data["trip"]["schedules"], "行程地点不应为空"
 
     trip_id = data["trip"]["id"]
-    # 异步生成：轮询直到完成
-    trip_data = None
-    for _ in range(50):
-        resp = client.get(f"/api/trips/{trip_id}", headers=headers)
-        assert resp.status_code == 200
-        trip_data = resp.json()
-        if trip_data["status"] == "generated":
-            break
-        time.sleep(0.2)
-    assert trip_data is not None and trip_data["status"] == "generated"
-    assert trip_data["schedules"], "行程地点不应为空"
-
     detail = client.get(f"/api/trips/{trip_id}", headers=headers)
     assert detail.status_code == 200
     public = client.get(f"/api/trips/{trip_id}/public")

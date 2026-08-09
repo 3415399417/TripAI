@@ -10,7 +10,7 @@ import type {
 } from "@/lib/types";
 
 // 同源代理：所有请求走 Vercel 的 /api/* 路由，避免浏览器直连后端跨域/网络问题
-const API_BASE = "";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL?.trim().replace(/\/+$/, "") ?? "";
 
 export class ApiError extends Error {
   status: number;

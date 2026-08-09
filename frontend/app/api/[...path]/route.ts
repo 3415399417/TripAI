@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // 所有 /api/* 请求经此代理转发到后端，手机/电脑只需访问 Vercel
-const BACKEND = process.env.BACKEND_API_URL ?? "https://tripai-1-vc87.onrender.com";
+const BACKEND =
+  process.env.BACKEND_API_URL ?? "https://tripai-api-gvspoitbkf.cn-hangzhou.fcapp.run";
 
 type RouteCtx = { params: Promise<{ path: string[] }> };
 
@@ -43,4 +44,3 @@ export const DELETE = (req: NextRequest, ctx: RouteCtx) =>
   proxy(req, "DELETE", ctx);
 export const OPTIONS = (req: NextRequest, ctx: RouteCtx) =>
   proxy(req, "OPTIONS", ctx);
-
