@@ -53,24 +53,31 @@ SYSTEM_PROMPT = """你是一名专业的旅行规划师，擅长根据用户需�
   ]
 }
 要求：
-1. 每个地点给出中文名和所在城市，地点尽量真实、知名、可在地图上找到。
-2. 每天 3-6 个地点，按地理位置就近安排，减少来回奔波。
-3. 行程天数要与用户填写的日期区间一致。
-4. 预算、人数、兴趣偏好、旅行节奏必须体现在行程和花费估计里。
-5. 如果无法确定坐标，latitude/longitude 可以给 null，后端会自行校正。
+1. 所有地点必须真实存在于用户指定的目的地城市，严禁推荐其他城市的地点。
+2. 每个地点给出中文名，尽量真实、知名、可在地图上找到；同一天不要安排重复地点，整个行程尽量避免重复。
+3. 每天 3-6 个地点，按地理位置就近安排，减少来回奔波。
+4. 行程天数要与用户填写的日期区间一致。
+5. 预算、人数、兴趣偏好、旅行节奏必须体现在行程和花费估计里。
+6. 如果无法确定坐标，latitude/longitude 可以给 null，后端会自行校正。
 """
 
 
-def generate_itinerary(req: TripCreate) -> AIGenerateResult:
+def generate_itinerary(req: TripCreate, feedback: str | None = None) -> AIGenerateResult:
     """Generate a validated itinerary. Falls back to a mock when no key."""
     if not settings.LLM_API_KEY:
         return _mock_itinerary(req)
+
+    user_content = build_user_prompt(req)
+    if feedback:
+        user_content += (
+            "\n\n上一轮生成的行程存在问题，请严格修正后再输出：\n" + feedback
+        )
 
     payload = {
         "model": settings.LLM_MODEL,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": build_user_prompt(req)},
+            {"role": "user", "content": user_content},
         ],
         "temperature": 0.7,
         "response_format": {"type": "json_object"},
@@ -113,8 +120,14 @@ def build_user_prompt(req: TripCreate) -> str:
 
 def save_itinerary(
     db: Session, trip: Trip, result: AIGenerateResult, city_hint: str | None
-) -> None:
-    """Persist itinerary items as Schedule rows, enriching places via AMap."""
+) -> tuple[int, int]:
+    """Persist itinerary items. Returns (total, fallback) place counts.
+
+    `fallback` counts places where AMap could not confirm a match, meaning
+    the LLM-provided coordinates are used as-is (possible wrong city).
+    """
+    total = 0
+    fallback = 0
     for day in result.days:
         for idx, item in enumerate(day.items):
             place = amap_service.enrich_place(
@@ -140,7 +153,11 @@ def save_itinerary(
                     reason=item.reason,
                 )
             )
+            total += 1
+            if not place.amap_id:
+                fallback += 1
     db.commit()
+    return total, fallback
 
 
 def save_reoptimized(

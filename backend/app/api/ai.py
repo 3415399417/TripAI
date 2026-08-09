@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models.trip import Trip
+from app.models.trip import Schedule, Trip
 from app.models.user import User
 from app.schemas.ai import AIGenerateResponse, ReoptimizeRequest
 from app.schemas.trip import TripCreate, TripOut
@@ -44,9 +44,22 @@ def generate_trip(
 
     try:
         result = ai_service.generate_itinerary(payload)
-        ai_service.save_itinerary(
+        total, fallback = ai_service.save_itinerary(
             db, trip, result, city_hint=payload.destination
         )
+        # Quality guard: if most places can't be confirmed in the destination
+        # city (AMap lookup failed), retry once with explicit feedback.
+        if fallback > 0 and fallback / max(total, 1) > 0.5:
+            feedback = (
+                f"上一轮输出中部分地点无法在目的地 {payload.destination} 确认，"
+                f"请只推荐 {payload.destination} 的真实地点，重新输出完整 JSON。"
+            )
+            result = ai_service.generate_itinerary(payload, feedback=feedback)
+            db.query(Schedule).filter(Schedule.trip_id == trip.id).delete()
+            db.flush()
+            ai_service.save_itinerary(
+                db, trip, result, city_hint=payload.destination
+            )
     except LLMError as exc:
         db.delete(trip)
         db.commit()

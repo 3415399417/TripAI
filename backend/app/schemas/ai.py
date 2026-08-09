@@ -1,6 +1,7 @@
-from typing import List
+import re
+from typing import Any, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.trip import TripOut
 
@@ -15,6 +16,47 @@ class AIPlaceItem(BaseModel):
     duration_minutes: int = Field(default=60, ge=10, le=600)
     transport: str | None = None
     recommended_time: str | None = None
+
+    @field_validator("cost_estimate", mode="before")
+    @classmethod
+    def _parse_cost(cls, value: Any) -> float:
+        """GLM-4-Flash sometimes emits strings like '免费' or '约200元/人'."""
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            text = (
+                value.replace("约", "")
+                .replace("元", "")
+                .replace("人民币", "")
+                .replace("每人", "")
+                .replace("/人", "")
+                .replace("人均", "")
+                .strip()
+            )
+            if text in ("免费", "无", "-", "未知", ""):
+                return 0.0
+            match = re.search(r"\d+(?:\.\d+)?", text)
+            return float(match.group()) if match else 0.0
+        return 0.0
+
+    @field_validator("duration_minutes", mode="before")
+    @classmethod
+    def _parse_duration(cls, value: Any) -> int:
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            text = value.strip()
+            if "半天" in text:
+                return 240
+            if "一天" in text or "全天" in text:
+                return 480
+            match = re.search(r"\d+(?:\.\d+)?", text)
+            if match:
+                hours = float(match.group())
+                if "小时" in text or "h" in text.lower():
+                    return max(10, min(600, int(hours * 60)))
+                return max(10, min(600, int(hours)))
+        return 60
 
 
 class AIItineraryDay(BaseModel):
