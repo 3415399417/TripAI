@@ -42,8 +42,10 @@ class AIPlaceItem(BaseModel):
     @field_validator("duration_minutes", mode="before")
     @classmethod
     def _parse_duration(cls, value: Any) -> int:
-        if isinstance(value, int):
-            return value
+        if isinstance(value, (int, float)):
+            minutes = int(value)
+            # 0 / missing duration -> assume one hour instead of failing
+            return 60 if minutes < 10 else min(600, max(10, minutes))
         if isinstance(value, str):
             text = value.strip()
             if "半天" in text:

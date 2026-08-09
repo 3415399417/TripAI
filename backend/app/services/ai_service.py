@@ -82,6 +82,9 @@ def generate_itinerary(req: TripCreate, feedback: str | None = None) -> AIGenera
         "temperature": 0.7,
         "response_format": {"type": "json_object"},
     }
+    if _supports_thinking_param():
+        # Thinking mode roughly triples latency; itinerary JSON doesn't need it.
+        payload["thinking"] = {"type": "disabled"}
     url = settings.LLM_BASE_URL.rstrip("/") + "/chat/completions"
     headers = {
         "Authorization": f"Bearer {settings.LLM_API_KEY}",
@@ -216,6 +219,8 @@ def reoptimize_itinerary(db: Session, trip: Trip, instruction: str | None) -> AI
         "temperature": 0.5,
         "response_format": {"type": "json_object"},
     }
+    if _supports_thinking_param():
+        payload["thinking"] = {"type": "disabled"}
     url = settings.LLM_BASE_URL.rstrip("/") + "/chat/completions"
     headers = {
         "Authorization": f"Bearer {settings.LLM_API_KEY}",
@@ -252,6 +257,12 @@ def _call_llm(url: str, headers: dict[str, str], payload: dict[str, Any]) -> str
         except Exception as exc:
             raise LLMError(f"LLM 调用失败: {exc}") from exc
     raise LLMError(f"LLM 调用失败（已自动重试一次）: {last_error}")
+
+
+def _supports_thinking_param() -> bool:
+    """SiliconFlow / DeepSeek accept a `thinking` param; other providers may not."""
+    base = settings.LLM_BASE_URL.lower()
+    return "siliconflow" in base or "deepseek.com" in base
 
 
 def _parse_json(text: str) -> dict[str, Any]:
