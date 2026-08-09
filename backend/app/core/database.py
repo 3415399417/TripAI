@@ -11,11 +11,11 @@ if settings.DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.sqlalchemy_database_url,
     connect_args=connect_args,
     pool_pre_ping=True,
     # Supabase 事务模式连接池不支持持久连接，用 NullPool 最稳妥
-    poolclass=NullPool if settings.DATABASE_URL.startswith("postgresql") else None,
+    poolclass=NullPool if settings.sqlalchemy_database_url.startswith("postgresql") else None,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

@@ -39,6 +39,17 @@ class Settings(BaseSettings):
     AMAP_WEB_KEY: str = ""
     AMAP_SEARCH_URL: str = "https://restapi.amap.com/v3/place/text"
 
+    @property
+    def sqlalchemy_database_url(self) -> str:
+        """Return a URL the SQLAlchemy engine can load without ambiguity.
+
+        We ship psycopg3, so a plain `postgresql://` URL (which SQLAlchemy
+        maps to psycopg2 by default) is normalized to `postgresql+psycopg://`.
+        """
+        if self.DATABASE_URL.startswith("postgresql://"):
+            return self.DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+        return self.DATABASE_URL
+
 
 @lru_cache
 def get_settings() -> Settings:
