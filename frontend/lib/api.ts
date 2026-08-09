@@ -44,7 +44,23 @@ export async function apiFetch<T>(
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60_000);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw new ApiError("请求超时，请检查网络后重试", 408);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!res.ok) {
     let detail = `请求失败 (${res.status})`;
     try {
