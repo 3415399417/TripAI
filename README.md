@@ -145,10 +145,63 @@ DATABASE_URL=postgresql+psycopg://tripai:tripai@localhost:5432/tripai
 
 ## 部署
 
-- 前端 → Vercel（免费，把 `NEXT_PUBLIC_API_URL` 配成后端域名）
-- 后端 → Render / Railway（免费额度内）
-- 数据库 → Supabase（免费档）
-- 高德 JS API Key 记得在控制台把部署域名加入白名单
+全免费方案：GitHub + Supabase + Render + Vercel。
+
+### 1. 推送代码到 GitHub
+
+```powershell
+cd E:\TripAI
+git remote add origin https://github.com/<你的用户名>/TripAI.git
+git branch -M main
+git push -u origin main
+```
+
+`.env` / `.env.local` 已被 .gitignore 排除，密钥不会上传。
+
+### 2. Supabase 数据库（免费）
+
+1. 打开 [supabase.com](https://supabase.com) 注册并创建项目（区域选新加坡或东京，延迟更低）
+2. 左侧 Database → Connect → **Transaction mode（端口 6543）** 的连接串复制
+3. 把连接串里的 `[YOUR-PASSWORD]` 换成数据库密码
+
+### 3. Render 后端（免费）
+
+1. 打开 [render.com](https://render.com) 注册（用 GitHub 登录最快）
+2. New → Web Service → 选择 TripAI 仓库
+3. 配置：
+   - Root Directory: `backend`
+   - Build: `pip install -r requirements.txt`
+   - Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+4. 添加环境变量：
+   - `DATABASE_URL` = Supabase 连接串
+   - `JWT_SECRET_KEY` = 本地 backend/.env 里那个随机密钥
+   - `LLM_BASE_URL` = `https://api.siliconflow.cn/v1`
+   - `LLM_API_KEY` = 硅基流动 Key
+   - `LLM_MODEL` = `deepseek-ai/DeepSeek-V4-Flash`
+   - `AMAP_WEB_KEY` = 高德 Web 服务 Key
+   - `CORS_ORIGINS` = `["https://<你的vercel域名>.vercel.app"]`
+5. 部署完成后记录后端地址（形如 `https://xxx.onrender.com`）
+
+> 免费档空闲 15 分钟后会休眠，首次访问要等 30~60 秒冷启动，属正常现象。
+
+### 4. Vercel 前端（免费）
+
+1. 打开 [vercel.com](https://vercel.com) 注册（GitHub 登录）
+2. New Project → 导入 TripAI 仓库 → Root Directory 选 `frontend`
+3. 添加环境变量：
+   - `NEXT_PUBLIC_API_URL` = `https://xxx.onrender.com`（后端地址）
+   - `NEXT_PUBLIC_AMAP_JS_KEY` = 高德 JS API Key
+4. 部署完成后得到 `https://xxx.vercel.app`
+
+### 5. 高德白名单
+
+去 [高德控制台](https://console.amap.com/dev/key/app) 编辑 JS API Key，
+把 `https://xxx.vercel.app` 加入域名白名单（Web 服务 Key 无需配置）。
+
+### 6. 上线验证
+
+手机浏览器打开 `https://xxx.vercel.app`，注册/登录 → 创建旅行 → 生成行程 → 地图定位 → 分享页，
+全流程走一遍即部署成功。
 
 ## 手机使用（PWA）
 
