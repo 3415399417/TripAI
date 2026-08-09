@@ -9,6 +9,14 @@ import PlaceCard from "@/components/PlaceCard";
 import { ApiError, getToken, tripApi } from "@/lib/api";
 import type { Place, ScheduleItem, Trip } from "@/lib/types";
 
+const MOBILE_TABS = [
+  { key: "itinerary", label: "行程" },
+  { key: "map", label: "地图" },
+  { key: "detail", label: "详情" },
+] as const;
+
+type MobileTab = (typeof MOBILE_TABS)[number]["key"];
+
 export default function TripPlannerPage() {
   const params = useParams<{ id: string }>();
   const tripId = Number(params.id);
@@ -17,6 +25,7 @@ export default function TripPlannerPage() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("itinerary");
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,6 +54,11 @@ export default function TripPlannerPage() {
   }, [tripId, router]);
 
   const selected = items.find((it) => it.id === selectedId) ?? null;
+
+  function handleSelect(id: number) {
+    setSelectedId(id);
+    setMobileTab("detail");
+  }
 
   function renumberDay(list: ScheduleItem[]): ScheduleItem[] {
     return list.map((it, idx) => ({ ...it, order_index: idx }));
@@ -191,7 +205,7 @@ export default function TripPlannerPage() {
   }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24 lg:pb-0">
       {/* Header */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -263,14 +277,66 @@ export default function TripPlannerPage() {
         )}
       </div>
 
-      {/* Three-column layout */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      {/* Mobile: segmented tabs */}
+      <div className="sticky top-16 z-30 -mx-4 border-b border-slate-200 bg-white/95 px-4 py-2 backdrop-blur lg:hidden">
+        <div className="flex rounded-xl bg-slate-100 p-1">
+          {MOBILE_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setMobileTab(tab.key)}
+              className={`flex-1 rounded-lg py-2 text-sm font-medium transition ${
+                mobileTab === tab.key
+                  ? "bg-white text-teal-700 shadow-sm"
+                  : "text-slate-500"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile panels */}
+      <div className="space-y-4 lg:hidden">
+        {mobileTab === "itinerary" && (
+          <ItineraryList
+            items={items}
+            selectedId={selectedId}
+            editMode={editMode}
+            onSelect={handleSelect}
+            onMove={moveItem}
+            onRemove={removeItem}
+            onAddPlace={addPlace}
+            destination={trip.destination}
+          />
+        )}
+        {mobileTab === "map" && (
+          <MapView
+            places={mapPlaces}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            className="h-[62vh]"
+          />
+        )}
+        {mobileTab === "detail" && (
+          <PlaceCard
+            item={selected}
+            editMode={editMode}
+            onMove={moveItem}
+            onRemove={removeItem}
+            onUpdate={updateItem}
+          />
+        )}
+      </div>
+
+      {/* Desktop three-column layout */}
+      <div className="hidden grid-cols-1 gap-4 lg:grid lg:grid-cols-12">
         <div className="max-h-[70vh] overflow-y-auto pr-1 lg:col-span-4">
           <ItineraryList
             items={items}
             selectedId={selectedId}
             editMode={editMode}
-            onSelect={setSelectedId}
+            onSelect={handleSelect}
             onMove={moveItem}
             onRemove={removeItem}
             onAddPlace={addPlace}
@@ -282,7 +348,7 @@ export default function TripPlannerPage() {
           <MapView
             places={mapPlaces}
             selectedId={selectedId}
-            onSelect={setSelectedId}
+            onSelect={handleSelect}
             className="h-[420px] lg:h-[calc(100vh-190px)] lg:sticky lg:top-24"
           />
         </div>
@@ -297,7 +363,30 @@ export default function TripPlannerPage() {
           />
         </div>
       </div>
+
+      {/* Mobile edit action bar */}
+      {editMode && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur lg:hidden">
+          <div className="flex gap-2">
+            <button
+              onClick={save}
+              disabled={saving}
+              className="flex-1 rounded-xl bg-teal-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-60"
+            >
+              {saving ? "保存中…" : "保存修改"}
+            </button>
+            <button
+              onClick={() => {
+                setEditMode(false);
+                setItems(trip.schedules);
+              }}
+              className="flex-1 rounded-xl border border-slate-200 bg-white py-3 text-sm font-medium text-slate-600"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
