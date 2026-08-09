@@ -97,9 +97,9 @@ LLM_MODEL=deepseek-chat
 LLM_BASE_URL=https://api.siliconflow.cn/v1
 LLM_MODEL=deepseek-ai/DeepSeek-V3
 
-# 或 智谱（GLM-4-Flash 官方免费模型）
+# 或 智谱（GLM-4-Flash-250414 官方免费模型）
 LLM_BASE_URL=https://open.bigmodel.cn/api/paas/v4
-LLM_MODEL=glm-4-flash
+LLM_MODEL=glm-4-flash-250414
 ```
 
 `LLM_API_KEY` 留空时后端自动进入 mock 模式，返回示例行程，方便先跑通全流程。
