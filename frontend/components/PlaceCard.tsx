@@ -8,6 +8,7 @@ interface PlaceCardProps {
   onMove: (id: number, dir: -1 | 1) => void;
   onRemove: (id: number) => void;
   onUpdate: (id: number, patch: Partial<ScheduleItem>) => void;
+  onViewOnMap: () => void;
 }
 
 export default function PlaceCard({
@@ -16,6 +17,7 @@ export default function PlaceCard({
   onMove,
   onRemove,
   onUpdate,
+  onViewOnMap,
 }: PlaceCardProps) {
   if (!item) {
     return (
@@ -44,6 +46,13 @@ export default function PlaceCard({
           {place.category ?? "景点"}
         </span>
       </div>
+
+      <button
+        onClick={onViewOnMap}
+        className="mt-4 w-full rounded-xl border border-teal-200 bg-teal-50 py-2.5 text-sm font-semibold text-teal-700 transition hover:bg-teal-100"
+      >
+        📍 在地图中查看位置
+      </button>
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <Info label="建议时间" value={item.recommended_time ?? "—"} />

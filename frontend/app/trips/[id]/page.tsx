@@ -26,6 +26,7 @@ export default function TripPlannerPage() {
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("itinerary");
+  const [mapFocus, setMapFocus] = useState<{ id: number; nonce: number } | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,6 +59,11 @@ export default function TripPlannerPage() {
   function handleSelect(id: number) {
     setSelectedId(id);
     setMobileTab("detail");
+  }
+
+  function handleViewOnMap(id: number) {
+    setMapFocus((prev) => ({ id, nonce: (prev?.nonce ?? 0) + 1 }));
+    setMobileTab("map");
   }
 
   function renumberDay(list: ScheduleItem[]): ScheduleItem[] {
@@ -298,7 +304,7 @@ export default function TripPlannerPage() {
 
       {/* Mobile panels */}
       <div className="space-y-4 lg:hidden">
-        {mobileTab === "itinerary" && (
+        <div className={mobileTab === "itinerary" ? "block" : "hidden"}>
           <ItineraryList
             items={items}
             selectedId={selectedId}
@@ -309,24 +315,27 @@ export default function TripPlannerPage() {
             onAddPlace={addPlace}
             destination={trip.destination}
           />
-        )}
-        {mobileTab === "map" && (
+        </div>
+        <div className={mobileTab === "map" ? "block" : "hidden"}>
           <MapView
             places={mapPlaces}
             selectedId={selectedId}
             onSelect={handleSelect}
+            focusId={mapFocus?.id ?? null}
+            focusNonce={mapFocus?.nonce ?? 0}
             className="h-[62vh]"
           />
-        )}
-        {mobileTab === "detail" && (
+        </div>
+        <div className={mobileTab === "detail" ? "block" : "hidden"}>
           <PlaceCard
             item={selected}
             editMode={editMode}
             onMove={moveItem}
             onRemove={removeItem}
             onUpdate={updateItem}
+            onViewOnMap={() => selected && handleViewOnMap(selected.id)}
           />
-        )}
+        </div>
       </div>
 
       {/* Desktop three-column layout */}
@@ -349,6 +358,8 @@ export default function TripPlannerPage() {
             places={mapPlaces}
             selectedId={selectedId}
             onSelect={handleSelect}
+            focusId={mapFocus?.id ?? null}
+            focusNonce={mapFocus?.nonce ?? 0}
             className="h-[420px] lg:h-[calc(100vh-190px)] lg:sticky lg:top-24"
           />
         </div>
@@ -360,6 +371,7 @@ export default function TripPlannerPage() {
             onMove={moveItem}
             onRemove={removeItem}
             onUpdate={updateItem}
+            onViewOnMap={() => selected && handleViewOnMap(selected.id)}
           />
         </div>
       </div>

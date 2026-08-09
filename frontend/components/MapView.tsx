@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import AMapLoader from "@amap/amap-jsapi-loader";
 
 const AMAP_JS_KEY = process.env.NEXT_PUBLIC_AMAP_JS_KEY ?? "";
 
@@ -18,6 +17,8 @@ interface MapViewProps {
   places: MapPlace[];
   selectedId: number | null;
   onSelect: (id: number) => void;
+  focusId?: number | null;
+  focusNonce?: number;
   className?: string;
 }
 
@@ -27,6 +28,8 @@ export default function MapView({
   places,
   selectedId,
   onSelect,
+  focusId = null,
+  focusNonce = 0,
   className = "",
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,21 +46,23 @@ export default function MapView({
     if (!AMAP_JS_KEY || !containerRef.current || mapRef.current) return;
     let disposed = false;
 
-    AMapLoader.load({
-      key: AMAP_JS_KEY,
-      version: "2.0",
-    })
-      .then((AMap: any) => {
-        if (disposed || !containerRef.current) return;
-        mapRef.current = new AMap.Map(containerRef.current, {
-          zoom: 11,
-          resizeEnable: true,
-        });
-        setStatus("ready");
-      })
-      .catch(() => {
-        if (!disposed) setStatus("error");
+    // Load the AMap loader dynamically so it never executes during SSR
+    // (the package references `window` at module evaluation time).
+    (async () => {
+      const { default: AMapLoader } = await import("@amap/amap-jsapi-loader");
+      const AMap = await AMapLoader.load({
+        key: AMAP_JS_KEY,
+        version: "2.0",
       });
+      if (disposed || !containerRef.current) return;
+      mapRef.current = new AMap.Map(containerRef.current, {
+        zoom: 11,
+        resizeEnable: true,
+      });
+      setStatus("ready");
+    })().catch(() => {
+      if (!disposed) setStatus("error");
+    });
 
     return () => {
       disposed = true;
@@ -117,6 +122,16 @@ export default function MapView({
     }
   }, [places, selectedId, status, onSelect]);
 
+  // Zoom to a specific place when requested from the detail view
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || status !== "ready") return;
+    if (focusId == null) return;
+    const target = places.find((p) => p.id === focusId);
+    if (!target) return;
+    map.setZoomAndCenter(15, [target.longitude, target.latitude]);
+  }, [focusId, focusNonce, places, status]);
+
   if (status === "missing-key") {
     return (
       <div
@@ -170,4 +185,3 @@ export default function MapView({
     </div>
   );
 }
-
