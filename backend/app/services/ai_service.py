@@ -88,14 +88,7 @@ def generate_itinerary(req: TripCreate, feedback: str | None = None) -> AIGenera
         "Content-Type": "application/json",
     }
 
-    try:
-        resp = httpx.post(
-            url, json=payload, headers=headers, timeout=settings.LLM_TIMEOUT_SECONDS
-        )
-        resp.raise_for_status()
-        content = resp.json()["choices"][0]["message"]["content"]
-    except Exception as exc:
-        raise LLMError(f"LLM 调用失败: {exc}") from exc
+    content = _call_llm(url, headers, payload)
 
     try:
         data = _parse_json(content)
@@ -228,14 +221,7 @@ def reoptimize_itinerary(db: Session, trip: Trip, instruction: str | None) -> AI
         "Authorization": f"Bearer {settings.LLM_API_KEY}",
         "Content-Type": "application/json",
     }
-    try:
-        resp = httpx.post(
-            url, json=payload, headers=headers, timeout=settings.LLM_TIMEOUT_SECONDS
-        )
-        resp.raise_for_status()
-        content = resp.json()["choices"][0]["message"]["content"]
-    except Exception as exc:
-        raise LLMError(f"LLM 调用失败: {exc}") from exc
+    content = _call_llm(url, headers, payload)
 
     try:
         return AIGenerateResult.model_validate(_parse_json(content))
@@ -248,6 +234,24 @@ def _group_schedules(trip: Trip) -> list[list[Schedule]]:
     for s in trip.schedules:
         grouped.setdefault(s.day, []).append(s)
     return [grouped[d] for d in sorted(grouped)]
+
+
+def _call_llm(url: str, headers: dict[str, str], payload: dict[str, Any]) -> str:
+    """POST to the LLM provider with one retry on transient timeouts."""
+    last_error: Exception | None = None
+    for attempt in range(2):
+        try:
+            resp = httpx.post(
+                url, json=payload, headers=headers, timeout=settings.LLM_TIMEOUT_SECONDS
+            )
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"]
+        except (httpx.TimeoutException, httpx.TransportError) as exc:
+            last_error = exc
+            continue
+        except Exception as exc:
+            raise LLMError(f"LLM 调用失败: {exc}") from exc
+    raise LLMError(f"LLM 调用失败（已自动重试一次）: {last_error}")
 
 
 def _parse_json(text: str) -> dict[str, Any]:

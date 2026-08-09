@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     LLM_BASE_URL: str = "https://api.deepseek.com/v1"
     LLM_API_KEY: str = ""
     LLM_MODEL: str = "deepseek-chat"
-    LLM_TIMEOUT_SECONDS: int = 90
+    LLM_TIMEOUT_SECONDS: int = 180
 
     # AMap Web Service API (server-side POI search; personal quota is free)
     AMAP_WEB_KEY: str = ""

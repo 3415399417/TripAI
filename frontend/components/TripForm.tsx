@@ -198,6 +198,9 @@ export default function TripForm({
       >
         {loading ? "AI 规划中，请稍候…" : "✨ 生成旅行方案"}
       </button>
+      <p className="text-center text-xs text-slate-400">
+        首次生成约需 1~3 分钟，AI 会为每个目的地规划真实地点，请耐心等待
+      </p>
     </form>
   );
 }
@@ -220,4 +223,3 @@ function Field({
     </label>
   );
 }
-
