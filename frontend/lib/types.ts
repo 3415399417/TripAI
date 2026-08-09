@@ -1,0 +1,72 @@
+export interface User {
+  id: number;
+  email: string;
+  nickname: string;
+  avatar: string | null;
+  created_at: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export interface Place {
+  id: number;
+  amap_id: string | null;
+  name: string;
+  address: string | null;
+  city: string | null;
+  category: string | null;
+  latitude: number;
+  longitude: number;
+  rating: number | null;
+  image_url: string | null;
+}
+
+export interface ScheduleItem {
+  id: number;
+  day: number;
+  order_index: number;
+  place: Place;
+  recommended_time: string | null;
+  duration_minutes: number;
+  cost_estimate: number;
+  transport: string | null;
+  reason: string | null;
+}
+
+export interface Trip {
+  id: number;
+  title: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  travelers: number;
+  budget: number;
+  pace: string;
+  interests: string[];
+  status: string;
+  created_at: string;
+  updated_at: string;
+  schedules: ScheduleItem[];
+}
+
+export interface TripCreate {
+  destination: string;
+  title?: string;
+  start_date: string;
+  end_date: string;
+  travelers: number;
+  budget: number;
+  pace: string;
+  interests: string[];
+}
+
+export interface AIGenerateResponse {
+  trip: Trip;
+  mock: boolean;
+  message: string;
+}
+

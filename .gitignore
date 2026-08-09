@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment files (keep .env.example)
+.env
+.env.local
+.env*.local
+
+# Databases / local data
+*.db
+*.sqlite3
+backend/tripai.db
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Logs & OS
+*.log
+Thumbs.db
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+

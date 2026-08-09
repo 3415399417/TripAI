@@ -1,0 +1,2 @@
+"""TripAI backend application package."""
+
