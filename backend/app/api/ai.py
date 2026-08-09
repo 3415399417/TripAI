@@ -19,6 +19,10 @@ from app.services.ai_service import LLMError
 settings = get_settings()
 router = APIRouter(prefix="/ai", tags=["ai"])
 
+# ---- 异步任务容错：任务可能因实例重启而中断，轮询 GET 时会自动重拉 ----
+_task_lock = threading.Lock()
+_running_tasks: set[int] = set()
+
 
 @router.post("/generate-trip", response_model=AIGenerateResponse, status_code=202)
 def generate_trip(
@@ -43,10 +47,7 @@ def generate_trip(
     db.commit()
     db.refresh(trip)
 
-    # 异步后台生成：请求立即返回，前端轮询 trip.status
-    threading.Thread(
-        target=_generate_worker, args=(trip.id, payload), daemon=True
-    ).start()
+    ensure_task_running(trip.id)
 
     mock = not settings.LLM_API_KEY
     return AIGenerateResponse(
@@ -56,23 +57,58 @@ def generate_trip(
     )
 
 
-def _generate_worker(trip_id: int, payload: TripCreate) -> None:
-    """Background generation. Failures delete the draft so polling sees 404."""
+def ensure_task_running(trip_id: int) -> None:
+    """Start the generation/optimization task unless it is already running."""
+    with _task_lock:
+        if trip_id in _running_tasks:
+            return
+        _running_tasks.add(trip_id)
+    threading.Thread(target=_run_task, args=(trip_id,), daemon=True).start()
+
+
+def _run_task(trip_id: int) -> None:
+    """Background generation/optimization driven by trip.status."""
     db = SessionLocal()
     try:
         trip = db.get(Trip, trip_id)
         if trip is None:
             return
-        result = ai_service.generate_itinerary(payload)
-        ai_service.save_itinerary(db, trip, result, city_hint=payload.destination)
-        trip.status = "generated"
-        db.commit()
+        if trip.status == "draft":
+            payload = TripCreate(
+                destination=trip.destination,
+                start_date=trip.start_date,
+                end_date=trip.end_date,
+                travelers=trip.travelers,
+                budget=trip.budget,
+                pace=trip.pace,
+                interests=json.loads(trip.interests or "[]"),
+            )
+            result = ai_service.generate_itinerary(payload)
+            ai_service.save_itinerary(
+                db, trip, result, city_hint=trip.destination
+            )
+            trip.status = "generated"
+            db.commit()
+        elif trip.status == "optimizing":
+            result = ai_service.reoptimize_itinerary(db, trip, None)
+            ai_service.save_reoptimized(
+                db, trip, result, city_hint=trip.destination
+            )
+            trip.status = "edited"
+            db.commit()
     except LLMError:
         db.rollback()
-        db.query(Trip).filter(Trip.id == trip_id).delete()
-        db.commit()
+        trip = db.get(Trip, trip_id)
+        if trip is not None:
+            if trip.status == "draft":
+                db.delete(trip)  # 生成失败，草稿删除，轮询将看到 404
+            else:
+                trip.status = "edited"  # 优化失败保留旧行程
+            db.commit()
     finally:
         db.close()
+        with _task_lock:
+            _running_tasks.discard(trip_id)
 
 
 @router.post("/reoptimize", response_model=AIGenerateResponse, status_code=202)
@@ -90,34 +126,10 @@ def reoptimize_trip(
     trip.status = "optimizing"
     db.commit()
 
-    threading.Thread(
-        target=_reoptimize_worker,
-        args=(trip.id, payload.instruction),
-        daemon=True,
-    ).start()
+    ensure_task_running(trip.id)
 
     return AIGenerateResponse(
         trip=TripOut.from_trip(trip),
         mock=not settings.LLM_API_KEY,
         message="AI 正在优化路线，请稍候…",
     )
-
-
-def _reoptimize_worker(trip_id: int, instruction: str | None) -> None:
-    db = SessionLocal()
-    try:
-        trip = db.get(Trip, trip_id)
-        if trip is None:
-            return
-        result = ai_service.reoptimize_itinerary(db, trip, instruction)
-        ai_service.save_reoptimized(db, trip, result, city_hint=trip.destination)
-        trip.status = "edited"
-        db.commit()
-    except LLMError:
-        db.rollback()
-        trip = db.get(Trip, trip_id)
-        if trip is not None:
-            trip.status = "edited"  # 保留旧行程
-            db.commit()
-    finally:
-        db.close()

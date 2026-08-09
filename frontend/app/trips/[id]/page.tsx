@@ -32,15 +32,29 @@ export default function TripPlannerPage() {
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genMessage, setGenMessage] = useState("AI 正在规划行程…");
+  const [genElapsed, setGenElapsed] = useState(0);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [copied, setCopied] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function stopPolling() {
     if (pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = null;
+    }
+  }
+
+  function startClock() {
+    setGenElapsed(0);
+    clockRef.current = setInterval(() => setGenElapsed((s) => s + 1), 1000);
+  }
+
+  function stopClock() {
+    if (clockRef.current) {
+      clearInterval(clockRef.current);
+      clockRef.current = null;
     }
   }
 
@@ -58,7 +72,7 @@ export default function TripPlannerPage() {
 
     let cancelled = false;
     let polls = 0;
-    const MAX_POLLS = 90;
+    const MAX_POLLS = 180; // 最长约 12 分钟
 
     async function pollOnce() {
       polls += 1;
@@ -73,6 +87,7 @@ export default function TripPlannerPage() {
         if (cancelled) return;
         if (t.status === "generated" || t.status === "edited") {
           stopPolling();
+          stopClock();
           applyTrip(t);
           setGenerating(false);
           setNotice("AI 行程已生成 ✓");
@@ -81,6 +96,7 @@ export default function TripPlannerPage() {
         if (cancelled) return;
         if (e instanceof ApiError && e.status === 404) {
           stopPolling();
+          stopClock();
           setGenerating(false);
           setError("AI 生成失败，请返回重新尝试");
         }
@@ -95,10 +111,12 @@ export default function TripPlannerPage() {
         if (t.status === "draft") {
           setGenMessage(`AI 正在规划 ${t.destination} 的行程…`);
           setGenerating(true);
+          startClock();
           pollRef.current = setInterval(pollOnce, 4000);
         } else if (t.status === "optimizing") {
           setGenMessage("AI 正在优化路线…");
           setGenerating(true);
+          startClock();
           pollRef.current = setInterval(pollOnce, 4000);
         }
       })
@@ -114,6 +132,7 @@ export default function TripPlannerPage() {
     return () => {
       cancelled = true;
       stopPolling();
+      stopClock();
     };
   }, [tripId, router]);
 
@@ -218,6 +237,7 @@ export default function TripPlannerPage() {
   async function reoptimize() {
     setGenerating(true);
     setGenMessage("AI 正在优化路线…");
+    startClock();
     setError("");
     setNotice("");
     try {
@@ -228,6 +248,7 @@ export default function TripPlannerPage() {
         polls += 1;
         if (polls > 90) {
           clearInterval(timer);
+          stopClock();
           setGenerating(false);
           setError("AI 优化超时，请稍后重试");
           return;
@@ -236,6 +257,7 @@ export default function TripPlannerPage() {
           const t = await tripApi.get(tripId);
           if (t.status === "edited" || t.status === "generated") {
             clearInterval(timer);
+            stopClock();
             applyTrip(t);
             setGenerating(false);
             setNotice("AI 已重新优化路线 ✓");
@@ -247,6 +269,7 @@ export default function TripPlannerPage() {
       pollRef.current = timer;
     } catch (e) {
       setGenerating(false);
+      stopClock();
       setError(e instanceof Error ? e.message : "优化失败");
     }
   }
@@ -287,6 +310,9 @@ export default function TripPlannerPage() {
         <h1 className="mt-6 text-xl font-bold text-slate-900">{genMessage}</h1>
         <p className="mt-2 text-sm text-slate-500">
           通常需要 1~3 分钟，请耐心等待，不要关闭页面
+        </p>
+        <p className="mt-3 text-xs tabular-nums text-slate-400">
+          已等待 {genElapsed} 秒…
         </p>
       </div>
     );

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.api.ai import ensure_task_running
 from app.core.database import get_db
 from app.models.trip import Schedule, Trip
 from app.models.user import User
@@ -40,7 +41,11 @@ def get_trip(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> TripOut:
-    return TripOut.from_trip(_get_owned_trip(db, trip_id, user))
+    trip = _get_owned_trip(db, trip_id, user)
+    # 自愈：实例重启导致后台任务中断时，轮询到这里会自动重新拉起
+    if trip.status in ("draft", "optimizing"):
+        ensure_task_running(trip_id)
+    return TripOut.from_trip(trip)
 
 
 @router.get("/{trip_id}/public", response_model=TripOut)
@@ -107,4 +112,3 @@ def delete_trip(
     trip = _get_owned_trip(db, trip_id, user)
     db.delete(trip)
     db.commit()
-
