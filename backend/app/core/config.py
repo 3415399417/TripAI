@@ -23,11 +23,9 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
 
-    # CORS (frontend dev server)
-    CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ]
+    # 演示项目：允许任意前端来源（配合 Bearer Token 认证，无 Cookie 风险）。
+    # 正式商用时可收紧为具体域名列表。
+    CORS_ORIGINS: List[str] = ["*"]
 
     # LLM provider (OpenAI-compatible /chat/completions)
     LLM_BASE_URL: str = "https://api.deepseek.com/v1"
