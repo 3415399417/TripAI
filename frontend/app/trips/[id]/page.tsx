@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ItineraryList from "@/components/ItineraryList";
 import MapView from "@/components/MapView";
 import PlaceCard from "@/components/PlaceCard";
@@ -30,28 +30,91 @@ export default function TripPlannerPage() {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [optimizing, setOptimizing] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [genMessage, setGenMessage] = useState("AI 正在规划行程…");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [copied, setCopied] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function stopPolling() {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }
+
+  function applyTrip(t: Trip) {
+    setTrip(t);
+    setItems(t.schedules);
+    setSelectedId(t.schedules[0]?.id ?? null);
+  }
 
   useEffect(() => {
     if (!getToken()) {
       router.push("/login");
       return;
     }
+
+    let cancelled = false;
+    let polls = 0;
+    const MAX_POLLS = 90;
+
+    async function pollOnce() {
+      polls += 1;
+      if (polls > MAX_POLLS) {
+        stopPolling();
+        setGenerating(false);
+        setError("AI 生成超时，请返回重新尝试");
+        return;
+      }
+      try {
+        const t = await tripApi.get(tripId);
+        if (cancelled) return;
+        if (t.status === "generated" || t.status === "edited") {
+          stopPolling();
+          applyTrip(t);
+          setGenerating(false);
+          setNotice("AI 行程已生成 ✓");
+        }
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof ApiError && e.status === 404) {
+          stopPolling();
+          setGenerating(false);
+          setError("AI 生成失败，请返回重新尝试");
+        }
+      }
+    }
+
     tripApi
       .get(tripId)
       .then((t) => {
-        setTrip(t);
-        setItems(t.schedules);
-        setSelectedId(t.schedules[0]?.id ?? null);
+        if (cancelled) return;
+        applyTrip(t);
+        if (t.status === "draft") {
+          setGenMessage(`AI 正在规划 ${t.destination} 的行程…`);
+          setGenerating(true);
+          pollRef.current = setInterval(pollOnce, 4000);
+        } else if (t.status === "optimizing") {
+          setGenMessage("AI 正在优化路线…");
+          setGenerating(true);
+          pollRef.current = setInterval(pollOnce, 4000);
+        }
       })
       .catch((e) => {
+        if (cancelled) return;
         if (e instanceof ApiError && e.status === 401) router.push("/login");
         else setError(e instanceof Error ? e.message : "加载失败");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      stopPolling();
+    };
   }, [tripId, router]);
 
   const selected = items.find((it) => it.id === selectedId) ?? null;
@@ -153,24 +216,38 @@ export default function TripPlannerPage() {
   }
 
   async function reoptimize() {
-    setOptimizing(true);
+    setGenerating(true);
+    setGenMessage("AI 正在优化路线…");
     setError("");
     setNotice("");
     try {
-      const res = await tripApi.reoptimize(tripId);
-      setTrip(res.trip);
-      setItems(res.trip.schedules);
-      setSelectedId(res.trip.schedules[0]?.id ?? null);
+      await tripApi.reoptimize(tripId); // 202：立即返回，后台优化
       setEditMode(false);
-      setNotice(
-        res.mock
-          ? "已重新优化（当前为示例模式）。配置 LLM_API_KEY 后由 AI 智能优化。"
-          : "AI 已重新优化路线 ✓"
-      );
+      let polls = 0;
+      const timer = setInterval(async () => {
+        polls += 1;
+        if (polls > 90) {
+          clearInterval(timer);
+          setGenerating(false);
+          setError("AI 优化超时，请稍后重试");
+          return;
+        }
+        try {
+          const t = await tripApi.get(tripId);
+          if (t.status === "edited" || t.status === "generated") {
+            clearInterval(timer);
+            applyTrip(t);
+            setGenerating(false);
+            setNotice("AI 已重新优化路线 ✓");
+          }
+        } catch {
+          // 网络抖动忽略，继续轮询
+        }
+      }, 4000);
+      pollRef.current = timer;
     } catch (e) {
+      setGenerating(false);
       setError(e instanceof Error ? e.message : "优化失败");
-    } finally {
-      setOptimizing(false);
     }
   }
 
@@ -197,6 +274,20 @@ export default function TripPlannerPage() {
         <Link href="/my-trips" className="mt-4 inline-block text-sm font-medium text-teal-600 hover:underline">
           返回我的旅行
         </Link>
+      </div>
+    );
+  }
+
+  if (generating) {
+    return (
+      <div className="mx-auto max-w-md pt-20 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-teal-50">
+          <span className="animate-spin text-3xl">🧭</span>
+        </div>
+        <h1 className="mt-6 text-xl font-bold text-slate-900">{genMessage}</h1>
+        <p className="mt-2 text-sm text-slate-500">
+          通常需要 1~3 分钟，请耐心等待，不要关闭页面
+        </p>
       </div>
     );
   }
@@ -255,10 +346,10 @@ export default function TripPlannerPage() {
                 </button>
                 <button
                   onClick={reoptimize}
-                  disabled={optimizing}
+                  disabled={generating}
                   className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-60"
                 >
-                  {optimizing ? "优化中…" : "✨ AI 重新优化"}
+                  {generating ? "优化中…" : "✨ AI 重新优化"}
                 </button>
                 <button
                   onClick={copyShareLink}

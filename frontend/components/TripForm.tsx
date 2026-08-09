@@ -39,7 +39,6 @@ export default function TripForm({
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   function toggleInterest(tag: string) {
     setInterests((prev) =>
@@ -50,8 +49,6 @@ export default function TripForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setNotice("");
-
     if (!destination.trim()) return setError("请填写目的地");
     if (!startDate || !endDate) return setError("请选择旅行日期");
     if (endDate < startDate) return setError("结束日期不能早于开始日期");
@@ -69,11 +66,6 @@ export default function TripForm({
     setLoading(true);
     try {
       const res = await tripApi.generate(payload);
-      if (res.mock) {
-        setNotice(
-          "当前为示例行程（未配置 LLM_API_KEY），可先体验完整流程，配置后即可生成真实行程。"
-        );
-      }
       router.push(`/trips/${res.trip.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "生成失败，请稍后重试");
@@ -185,12 +177,6 @@ export default function TripForm({
           {error}
         </p>
       )}
-      {notice && (
-        <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          {notice}
-        </p>
-      )}
-
       <button
         type="submit"
         disabled={loading}

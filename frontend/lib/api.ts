@@ -9,7 +9,8 @@ import type {
   User,
 } from "@/lib/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// 同源代理：所有请求走 Vercel 的 /api/* 路由，避免浏览器直连后端跨域/网络问题
+const API_BASE = "";
 
 export class ApiError extends Error {
   status: number;

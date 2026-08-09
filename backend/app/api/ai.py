@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import json
+import threading
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.config import get_settings
-from app.core.database import get_db
-from app.models.trip import Schedule, Trip
+from app.core.database import SessionLocal, get_db
+from app.models.trip import Trip
 from app.models.user import User
 from app.schemas.ai import AIGenerateResponse, ReoptimizeRequest
 from app.schemas.trip import TripCreate, TripOut
@@ -19,7 +20,7 @@ settings = get_settings()
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
-@router.post("/generate-trip", response_model=AIGenerateResponse)
+@router.post("/generate-trip", response_model=AIGenerateResponse, status_code=202)
 def generate_trip(
     payload: TripCreate,
     user: User = Depends(get_current_user),
@@ -42,44 +43,39 @@ def generate_trip(
     db.commit()
     db.refresh(trip)
 
-    try:
-        result = ai_service.generate_itinerary(payload)
-        total, fallback = ai_service.save_itinerary(
-            db, trip, result, city_hint=payload.destination
-        )
-        # Quality guard: if most places can't be confirmed in the destination
-        # city (AMap lookup failed), retry once with explicit feedback.
-        if fallback > 0 and fallback / max(total, 1) > 0.5:
-            feedback = (
-                f"上一轮输出中部分地点无法在目的地 {payload.destination} 确认，"
-                f"请只推荐 {payload.destination} 的真实地点，重新输出完整 JSON。"
-            )
-            result = ai_service.generate_itinerary(payload, feedback=feedback)
-            db.query(Schedule).filter(Schedule.trip_id == trip.id).delete()
-            db.flush()
-            ai_service.save_itinerary(
-                db, trip, result, city_hint=payload.destination
-            )
-    except LLMError as exc:
-        db.delete(trip)
-        db.commit()
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    trip.status = "generated"
-    db.commit()
-    db.refresh(trip)
+    # 异步后台生成：请求立即返回，前端轮询 trip.status
+    threading.Thread(
+        target=_generate_worker, args=(trip.id, payload), daemon=True
+    ).start()
 
     mock = not settings.LLM_API_KEY
     return AIGenerateResponse(
         trip=TripOut.from_trip(trip),
         mock=mock,
-        message="行程已生成（当前为示例数据，配置 LLM_API_KEY 后由 AI 生成真实行程）"
-        if mock
-        else "行程已生成",
+        message="AI 正在规划行程，请稍候…",
     )
 
 
-@router.post("/reoptimize", response_model=AIGenerateResponse)
+def _generate_worker(trip_id: int, payload: TripCreate) -> None:
+    """Background generation. Failures delete the draft so polling sees 404."""
+    db = SessionLocal()
+    try:
+        trip = db.get(Trip, trip_id)
+        if trip is None:
+            return
+        result = ai_service.generate_itinerary(payload)
+        ai_service.save_itinerary(db, trip, result, city_hint=payload.destination)
+        trip.status = "generated"
+        db.commit()
+    except LLMError:
+        db.rollback()
+        db.query(Trip).filter(Trip.id == trip_id).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
+@router.post("/reoptimize", response_model=AIGenerateResponse, status_code=202)
 def reoptimize_trip(
     payload: ReoptimizeRequest,
     user: User = Depends(get_current_user),
@@ -91,22 +87,37 @@ def reoptimize_trip(
     if not trip.schedules:
         raise HTTPException(status_code=400, detail="行程为空，无法重新优化")
 
-    try:
-        result = ai_service.reoptimize_itinerary(db, trip, payload.instruction)
-        ai_service.save_reoptimized(
-            db, trip, result, city_hint=trip.destination
-        )
-    except LLMError as exc:
-        db.rollback()
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    trip.status = "edited"
+    trip.status = "optimizing"
     db.commit()
-    db.refresh(trip)
 
-    mock = not settings.LLM_API_KEY
+    threading.Thread(
+        target=_reoptimize_worker,
+        args=(trip.id, payload.instruction),
+        daemon=True,
+    ).start()
+
     return AIGenerateResponse(
         trip=TripOut.from_trip(trip),
-        mock=mock,
-        message="已重新优化（示例数据）" if mock else "已重新优化",
+        mock=not settings.LLM_API_KEY,
+        message="AI 正在优化路线，请稍候…",
     )
+
+
+def _reoptimize_worker(trip_id: int, instruction: str | None) -> None:
+    db = SessionLocal()
+    try:
+        trip = db.get(Trip, trip_id)
+        if trip is None:
+            return
+        result = ai_service.reoptimize_itinerary(db, trip, instruction)
+        ai_service.save_reoptimized(db, trip, result, city_hint=trip.destination)
+        trip.status = "edited"
+        db.commit()
+    except LLMError:
+        db.rollback()
+        trip = db.get(Trip, trip_id)
+        if trip is not None:
+            trip.status = "edited"  # 保留旧行程
+            db.commit()
+    finally:
+        db.close()
