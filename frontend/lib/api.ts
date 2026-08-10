@@ -105,13 +105,13 @@ export const tripApi = {
     apiFetch<AIGenerateResponse>("/api/ai/generate-trip", {
       method: "POST",
       body: JSON.stringify(payload),
-      timeoutMs: 180_000,
+      timeoutMs: 240_000,
     }),
   reoptimize: (tripId: number, instruction?: string) =>
     apiFetch<AIGenerateResponse>("/api/ai/reoptimize", {
       method: "POST",
       body: JSON.stringify({ trip_id: tripId, instruction: instruction ?? null }),
-      timeoutMs: 180_000,
+      timeoutMs: 240_000,
     }),
   updateSchedule: (tripId: number, items: ScheduleUpsertItem[]) =>
     apiFetch<Trip>(`/api/trips/${tripId}/schedule`, {

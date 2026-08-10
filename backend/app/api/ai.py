@@ -19,6 +19,68 @@ settings = get_settings()
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
+def _sum_costs(result) -> float:
+    return sum(
+        item.cost_estimate for day in result.days for item in day.items
+    )
+
+
+def _tier_quality_check(result, payload) -> tuple[bool, str]:
+    """Ensure hotels / dining / experiences match the budget tier.
+
+    Budget is spending power, not a spend-all target, so we verify the
+    *quality tier* of the plan rather than forcing total spend upward.
+    """
+    days = (payload.end_date - payload.start_date).days + 1
+    per_day = payload.budget / max(days, 1) / max(payload.travelers, 1)
+    if per_day >= 2500:
+        hotel_min, dining_min, exp_min = 1500, 300, 500
+    elif per_day >= 1000:
+        hotel_min, dining_min, exp_min = 800, 150, 300
+    elif per_day >= 400:
+        hotel_min, dining_min, exp_min = 300, 60, 100
+    else:
+        hotel_min, dining_min, exp_min = 120, 30, 50
+
+    hotels: list[float] = []
+    dining: list[float] = []
+    experiences: list[float] = []
+    for day in result.days:
+        for item in day.items:
+            category = item.category or ""
+            if "住宿" in category:
+                hotels.append(item.cost_estimate)
+            elif "餐饮" in category or "美食" in category:
+                dining.append(item.cost_estimate)
+            elif "娱乐" in category or "购物" in category:
+                experiences.append(item.cost_estimate)
+
+    avg_hotel = sum(hotels) / len(hotels) if hotels else 0.0
+    fancy_dining = sum(1 for c in dining if c >= dining_min)
+    fancy_exp = sum(1 for c in experiences if c >= exp_min)
+
+    if hotels and avg_hotel < hotel_min:
+        return False, (
+            f"住宿均价 {round(avg_hotel)} 元低于该预算等级应有的 {hotel_min} 元，"
+            "请升级酒店档次"
+        )
+    if dining and fancy_dining < 2:
+        return False, (
+            f"人均 {dining_min} 元以上的高档餐厅只有 {fancy_dining} 家，"
+            "请至少安排 2 家与消费等级匹配的餐厅"
+        )
+    if experiences and fancy_exp < 1:
+        return False, (
+            f"缺少人均 {exp_min} 元以上的娱乐/购物体验，请增加 1 个"
+        )
+    total = _sum_costs(result)
+    if total < payload.budget * 0.35:
+        return False, (
+            f"行程总花费 {round(total)} 元过低，请整体提升消费档次"
+        )
+    return True, ""
+
+
 @router.post("/generate-trip", response_model=AIGenerateResponse)
 def generate_trip(
     payload: TripCreate,
@@ -44,6 +106,13 @@ def generate_trip(
 
     try:
         result = ai_service.generate_itinerary(payload)
+        ok, quality_feedback = _tier_quality_check(result, payload)
+        if not ok:
+            feedback = (
+                quality_feedback
+                + "，重新输出完整 JSON，保持地点真实且符合目的地城市。"
+            )
+            result = ai_service.generate_itinerary(payload, feedback=feedback)
         total, fallback = ai_service.save_itinerary(
             db, trip, result, city_hint=payload.destination
         )
