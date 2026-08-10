@@ -19,7 +19,7 @@ export default function TripAlternativesCard({ trip }: { trip: Trip }) {
             className="rounded-xl border border-amber-100 bg-white px-3 py-2.5"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-semibold text-slate-800">
+              <span className="min-w-0 break-words text-sm font-semibold text-slate-800">
                 {alt.name}
               </span>
               {alt.cost_estimate != null && alt.cost_estimate > 0 && (

@@ -80,7 +80,7 @@ export default function TripBudgetCard({ trip }: { trip: Trip }) {
             const amount = Number(breakdown[key]) || 0;
             const pct = Math.min(100, Math.round((amount / total) * 100));
             return (
-              <div key={key} className="rounded-xl bg-slate-50 px-3 py-2">
+              <div key={key} className="min-w-0 rounded-xl bg-slate-50 px-3 py-2">
                 <div className="flex items-center justify-between text-xs text-slate-500">
                   <span>{key}</span>
                   <span className="font-semibold text-slate-700">¥{amount}</span>

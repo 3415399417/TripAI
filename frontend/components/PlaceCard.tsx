@@ -42,7 +42,7 @@ export default function PlaceCard({
             第 {item.day} 天 · 第 {item.order_index + 1} 站
           </p>
         </div>
-        <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">
+        <span className="max-w-[55%] truncate rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">
           {place.category ?? "景点"}
         </span>
       </div>

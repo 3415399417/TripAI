@@ -43,7 +43,7 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 sm:flex">
+        <nav className="hidden items-center gap-1 lg:flex">
           <Link href="/" className={linkClass("/")}>
             首页
           </Link>
@@ -58,7 +58,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           {loading ? null : user ? (
             <>
-              <span className="hidden text-sm text-slate-600 sm:inline">
+              <span className="hidden text-sm text-slate-600 lg:inline">
                 {user.nickname}
               </span>
               <button
@@ -92,7 +92,7 @@ export default function Navbar() {
       </div>
 
       {/* 移动端底部导航 */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-safe backdrop-blur sm:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-safe backdrop-blur lg:hidden">
         <div className="grid grid-cols-3">
           <Link
             href="/"

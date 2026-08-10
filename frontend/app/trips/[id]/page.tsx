@@ -219,7 +219,9 @@ export default function TripPlannerPage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{trip.title}</h1>
+            <h1 className="break-words text-2xl font-bold text-slate-900">
+              {trip.title}
+            </h1>
             <div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-500">
               <span>📍 {trip.destination}</span>
               <span>· {trip.start_date.slice(0, 10)} ~ {trip.end_date.slice(0, 10)}</span>
@@ -388,7 +390,7 @@ export default function TripPlannerPage() {
 
       {/* Mobile edit action bar */}
       {editMode && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur lg:hidden">
+        <div className="fixed inset-x-0 bottom-14 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur lg:hidden">
           <div className="flex gap-2">
             <button
               onClick={save}

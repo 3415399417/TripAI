@@ -5,8 +5,12 @@
   --brand-dark: #0f766e;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  @apply bg-slate-50 text-slate-800 antialiased;
+  @apply overflow-x-clip bg-slate-50 text-slate-800 antialiased;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
