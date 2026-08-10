@@ -60,6 +60,7 @@ def _apply_light_migrations() -> None:
             "budget_min": "FLOAT",
             "budget_max": "FLOAT",
             "budget_breakdown": "TEXT",
+            "alternatives": "TEXT",
             "travel_style": "VARCHAR(32)",
             "city_level": "VARCHAR(32)",
             "city_factor": "FLOAT",

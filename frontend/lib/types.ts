@@ -54,6 +54,7 @@ export interface Trip {
   budget_min: number | null;
   budget_max: number | null;
   budget_breakdown: Record<string, number>;
+  alternatives: TripAlternative[];
   city_level: string | null;
   city_factor: number | null;
   daily_budget: number | null;
@@ -61,6 +62,15 @@ export interface Trip {
   created_at: string;
   updated_at: string;
   schedules: ScheduleItem[];
+}
+
+export interface TripAlternative {
+  name: string;
+  description: string | null;
+  cost_estimate: number;
+  day: number | null;
+  replaces: string | null;
+  reason: string | null;
 }
 
 export interface TripCreate {

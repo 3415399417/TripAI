@@ -81,6 +81,27 @@ class BudgetRange(BaseModel):
         return 0.0
 
 
+class AlternativeItem(BaseModel):
+    """An optional suggestion the user can choose to add or swap in."""
+
+    name: str = Field(min_length=1, max_length=128)
+    description: str | None = None
+    cost_estimate: float = Field(default=0, ge=0)
+    day: int | None = Field(default=None, ge=1)
+    replaces: str | None = None
+    reason: str | None = None
+
+    @field_validator("cost_estimate", mode="before")
+    @classmethod
+    def _parse_cost(cls, value: Any) -> float:
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            match = re.search(r"\d+(?:\.\d+)?", value.replace(",", ""))
+            return float(match.group()) if match else 0.0
+        return 0.0
+
+
 class AIGenerateResult(BaseModel):
     title: str | None = None
     traveler_profile: str | None = None
@@ -88,6 +109,7 @@ class AIGenerateResult(BaseModel):
     budget_range: BudgetRange | None = None
     budget_breakdown: dict[str, float] = Field(default_factory=dict)
     days: List[AIItineraryDay] = Field(min_length=1)
+    alternatives: List[AlternativeItem] = Field(default_factory=list)
 
     @field_validator("budget_breakdown", mode="before")
     @classmethod

@@ -76,6 +76,7 @@ class TripOut(BaseModel):
     budget_min: float | None = None
     budget_max: float | None = None
     budget_breakdown: dict[str, float] = Field(default_factory=dict)
+    alternatives: list[dict] = Field(default_factory=list)
     city_level: str | None = None
     city_factor: float | None = None
     daily_budget: float | None = None
@@ -92,6 +93,10 @@ class TripOut(BaseModel):
             breakdown = json.loads(trip.budget_breakdown or "{}")
         except (ValueError, TypeError):
             breakdown = {}
+        try:
+            alternatives = json.loads(trip.alternatives or "[]")
+        except (ValueError, TypeError):
+            alternatives = []
         return cls(
             id=trip.id,
             title=trip.title,
@@ -109,6 +114,7 @@ class TripOut(BaseModel):
             budget_min=trip.budget_min,
             budget_max=trip.budget_max,
             budget_breakdown=breakdown if isinstance(breakdown, dict) else {},
+            alternatives=alternatives if isinstance(alternatives, list) else [],
             city_level=trip.city_level,
             city_factor=trip.city_factor,
             daily_budget=trip.daily_budget,

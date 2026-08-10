@@ -32,6 +32,7 @@ class Trip(Base):
     budget_min: Mapped[float | None] = mapped_column(Float, nullable=True)
     budget_max: Mapped[float | None] = mapped_column(Float, nullable=True)
     budget_breakdown: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    alternatives: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
     city_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
     city_factor: Mapped[float | None] = mapped_column(Float, nullable=True)
     daily_budget: Mapped[float | None] = mapped_column(Float, nullable=True)
