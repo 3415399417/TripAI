@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   },
 };
 
+// 全站动态渲染，避免页面被网关/浏览器缓存导致用户看到旧版本
+export const dynamic = "force-dynamic";
+
 export const viewport: Viewport = {
   themeColor: "#0d9488",
   width: "device-width",
