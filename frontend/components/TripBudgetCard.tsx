@@ -55,6 +55,17 @@ export default function TripBudgetCard({ trip }: { trip: Trip }) {
         </p>
       )}
 
+      {trip.city_level && (
+        <p className="mt-1 text-xs text-slate-400">
+          {trip.city_level}
+          {trip.city_factor != null ? `（城市系数 ${trip.city_factor}）` : ""}
+          {trip.daily_budget != null
+            ? ` · 人均日预算 ¥${trip.daily_budget}`
+            : ""}
+          {trip.travel_style ? ` · ${trip.travel_style}` : ""}
+        </p>
+      )}
+
       {trip.budget > 0 && totalCost > 0 && (
         <p className="mt-1 text-xs text-slate-500">
           行程地点预估合计 ¥{totalCost}

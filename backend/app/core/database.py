@@ -60,6 +60,10 @@ def _apply_light_migrations() -> None:
             "budget_min": "FLOAT",
             "budget_max": "FLOAT",
             "budget_breakdown": "TEXT",
+            "travel_style": "VARCHAR(32)",
+            "city_level": "VARCHAR(32)",
+            "city_factor": "FLOAT",
+            "daily_budget": "FLOAT",
         }
         with engine.begin() as conn:
             for column, ddl in wanted.items():

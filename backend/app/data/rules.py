@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.data import cities, interests as interest_rules, pace as pace_rules, tiers
+from app.data import (
+    cities,
+    city_tiers,
+    interests as interest_rules,
+    pace as pace_rules,
+    tiers,
+)
 
 
 def build_plan(req: Any) -> dict[str, Any]:
@@ -14,6 +20,7 @@ def build_plan(req: Any) -> dict[str, Any]:
     travelers = max(req.travelers, 1)
     budget = max(float(req.budget or 0), 0)
     user_interests = list(req.interests or [])
+    travel_style = str(getattr(req, "travel_style", "") or "城市探索")
 
     factor = cities.city_factor(destination)
     city_label = cities.city_level(destination)
@@ -23,6 +30,9 @@ def build_plan(req: Any) -> dict[str, Any]:
 
     tier_rule = tiers.TIER_RULES[level]
     ratio = interest_rules.adjust_ratio(tier_rule["ratio"], user_interests)
+    style_weights = interest_rules.TRAVEL_STYLE_WEIGHTS.get(travel_style)
+    if style_weights:
+        ratio = interest_rules.adjust_ratio(ratio, [travel_style])
 
     suggested_min = round(budget * 0.85)
     suggested_max = round(budget * 0.93)
@@ -39,11 +49,16 @@ def build_plan(req: Any) -> dict[str, Any]:
         "奢华型": "尊享之旅",
     }[level]
     profile = f"{destination}{days}天{level}"
+    if travel_style and travel_style != "城市探索":
+        profile += f"·{travel_style}"
     if interest:
         profile += f"·{interest}偏好"
     profile += tag + "旅行者"
 
     daily_places = pace_rules.daily_places(days)
+    place_preferences = interest_rules.place_preferences(
+        user_interests, travel_style
+    )
     return {
         "profile": profile,
         "level": level,
@@ -61,5 +76,14 @@ def build_plan(req: Any) -> dict[str, Any]:
             "transport": tier_rule["transport"],
             "attractions": tier_rule["attractions"],
             "experiences": tier_rule["experiences"],
+            "goals": tier_rule["goals"],
+            "city_hotel_range": city_tiers.city_tier_rule(destination, level)[
+                "hotel_range"
+            ],
+            "city_dining_range": city_tiers.city_tier_rule(destination, level)[
+                "dining_per_day"
+            ],
         },
+        "place_preferences": place_preferences,
+        "travel_style": travel_style,
     }

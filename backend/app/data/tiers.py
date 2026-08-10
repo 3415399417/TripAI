@@ -17,6 +17,7 @@ class TierRule(TypedDict):
     transport: str
     attractions: str
     experiences: str
+    goals: str
     ratio: dict[str, float]
 
 
@@ -30,6 +31,7 @@ TIER_RULES: dict[str, TierRule] = {
         "transport": "地铁、公交为主，少量打车",
         "attractions": "免费景点、城市探索、少量收费景点",
         "experiences": "城市漫步、免费观景台、博物馆",
+        "goals": "性价比：用较少的钱覆盖更多景点和城市区域",
         "ratio": {
             "住宿": 0.32,
             "餐饮": 0.26,
@@ -49,6 +51,7 @@ TIER_RULES: dict[str, TierRule] = {
         "transport": "地铁 + 网约车结合",
         "attractions": "城市地标、热门景区、特色体验",
         "experiences": "演出、游船、特色体验项目",
+        "goals": "便利与舒适：行程省心、时间效率高",
         "ratio": {
             "住宿": 0.35,
             "餐饮": 0.24,
@@ -68,6 +71,7 @@ TIER_RULES: dict[str, TierRule] = {
         "transport": "网约车、专车",
         "attractions": "高质量体验、私人导览、特殊活动",
         "experiences": "私人导览、VIP体验、高端展览",
+        "goals": "服务与品质：独特体验、管家式安排",
         "ratio": {
             "住宿": 0.40,
             "餐饮": 0.22,
@@ -87,6 +91,7 @@ TIER_RULES: dict[str, TierRule] = {
         "transport": "专车、包车、高端车型",
         "attractions": "VIP体验、高端展览、私人导览",
         "experiences": "私人摄影、VIP活动、游艇/直升机等",
+        "goals": "时间与身份体验：专属服务、顶级礼遇",
         "ratio": {
             "住宿": 0.45,
             "餐饮": 0.20,
@@ -119,4 +124,3 @@ def hotel_min_for(level: str) -> float:
 
 def dining_per_day_for(level: str) -> float:
     return TIER_RULES[level]["dining_per_day"][0]
-

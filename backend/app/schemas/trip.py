@@ -18,6 +18,7 @@ class TripCreate(BaseModel):
     budget: float = Field(default=0, ge=0)
     pace: str = Field(default="适中", max_length=32)
     interests: List[str] = Field(default_factory=list)
+    travel_style: str = Field(default="城市探索", max_length=32)
 
 
 class TripUpdate(BaseModel):
@@ -28,6 +29,7 @@ class TripUpdate(BaseModel):
     budget: float | None = Field(default=None, ge=0)
     pace: str | None = None
     interests: List[str] | None = None
+    travel_style: str | None = None
 
 
 class ScheduleItemOut(BaseModel):
@@ -65,11 +67,15 @@ class TripOut(BaseModel):
     budget: float
     pace: str
     interests: List[str]
+    travel_style: str = "城市探索"
     traveler_profile: str | None = None
     consumption_level: str | None = None
     budget_min: float | None = None
     budget_max: float | None = None
     budget_breakdown: dict[str, float] = Field(default_factory=dict)
+    city_level: str | None = None
+    city_factor: float | None = None
+    daily_budget: float | None = None
     status: str
     created_at: datetime
     updated_at: datetime
@@ -93,11 +99,15 @@ class TripOut(BaseModel):
             budget=trip.budget,
             pace=trip.pace,
             interests=interests,
+            travel_style=trip.travel_style or "城市探索",
             traveler_profile=trip.traveler_profile,
             consumption_level=trip.consumption_level,
             budget_min=trip.budget_min,
             budget_max=trip.budget_max,
             budget_breakdown=breakdown if isinstance(breakdown, dict) else {},
+            city_level=trip.city_level,
+            city_factor=trip.city_factor,
+            daily_budget=trip.daily_budget,
             status=trip.status,
             created_at=trip.created_at,
             updated_at=trip.updated_at,

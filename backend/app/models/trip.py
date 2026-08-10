@@ -25,11 +25,15 @@ class Trip(Base):
     budget: Mapped[float] = mapped_column(Float, default=0)
     pace: Mapped[str] = mapped_column(String(32), default="适中")
     interests: Mapped[str] = mapped_column(Text, default="[]")  # JSON array
+    travel_style: Mapped[str] = mapped_column(String(32), default="城市探索")
     traveler_profile: Mapped[str | None] = mapped_column(String(255), nullable=True)
     consumption_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
     budget_min: Mapped[float | None] = mapped_column(Float, nullable=True)
     budget_max: Mapped[float | None] = mapped_column(Float, nullable=True)
     budget_breakdown: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    city_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    city_factor: Mapped[float | None] = mapped_column(Float, nullable=True)
+    daily_budget: Mapped[float | None] = mapped_column(Float, nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="draft")  # draft|generated
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

@@ -147,6 +147,9 @@ def generate_trip(
         trip.budget_min = result.budget_range.min
         trip.budget_max = result.budget_range.max
     trip.budget_breakdown = json.dumps(result.budget_breakdown, ensure_ascii=False)
+    trip.city_level = plan["city_level"]
+    trip.city_factor = plan["city_factor"]
+    trip.daily_budget = plan["daily_budget"]
 
     trip.status = "generated"
     db.commit()

@@ -20,6 +20,19 @@ const INTEREST_OPTIONS = [
 
 const PACE_OPTIONS = ["轻松", "适中", "紧凑"];
 
+const STYLE_OPTIONS = [
+  "城市探索",
+  "亲子",
+  "蜜月",
+  "商务",
+  "度假",
+  "摄影",
+  "美食",
+  "自然",
+  "购物",
+  "人文历史",
+];
+
 interface TripFormProps {
   initialDestination?: string;
   initialInterests?: string[];
@@ -37,6 +50,7 @@ export default function TripForm({
   const [budget, setBudget] = useState(3000);
   const [pace, setPace] = useState("适中");
   const [interests, setInterests] = useState<string[]>(initialInterests);
+  const [travelStyle, setTravelStyle] = useState("城市探索");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -61,6 +75,7 @@ export default function TripForm({
       budget,
       pace,
       interests,
+      travel_style: travelStyle,
     };
 
     setLoading(true);
@@ -167,6 +182,25 @@ export default function TripForm({
               }`}
             >
               {tag}
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      <Field label="旅行类型">
+        <div className="flex flex-wrap gap-2">
+          {STYLE_OPTIONS.map((s) => (
+            <button
+              type="button"
+              key={s}
+              onClick={() => setTravelStyle(s)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                travelStyle === s
+                  ? "border-teal-600 bg-teal-50 text-teal-700"
+                  : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+              }`}
+            >
+              {s}
             </button>
           ))}
         </div>

@@ -31,12 +31,57 @@ CATEGORY_BOUNDS: dict[str, tuple[float, float]] = {
     "备用资金": (0.02, 0.08),
 }
 
+# 旅行类型 → 预算权重（与兴趣权重叠加）
+TRAVEL_STYLE_WEIGHTS: dict[str, dict[str, float]] = {
+    "蜜月": {"住宿": 6, "餐饮": 4, "娱乐体验": 4, "购物": 2, "交通": -4, "景点门票": -4},
+    "亲子": {"景点门票": 5, "娱乐体验": 3, "交通": 2, "住宿": -3, "餐饮": -2, "购物": -5},
+    "商务": {"住宿": 5, "交通": 2, "餐饮": 2, "购物": -2, "娱乐体验": -4, "景点门票": -4},
+    "度假": {"住宿": 4, "娱乐体验": 3, "餐饮": 2, "交通": -3, "景点门票": -3},
+    "城市探索": {"景点门票": 3, "交通": 2, "餐饮": 2, "购物": -4, "娱乐体验": -2},
+    "摄影": {"景点门票": 3, "交通": 2, "购物": -5, "娱乐体验": -3},
+    "美食": {"餐饮": 8, "购物": -4, "住宿": -2, "娱乐体验": -2},
+    "自然": {"景点门票": 5, "交通": 2, "购物": -4, "娱乐体验": -3},
+    "购物": {"购物": 10, "餐饮": -4, "住宿": -3, "娱乐体验": -3},
+    "人文历史": {"景点门票": 4, "餐饮": 2, "娱乐体验": -2, "购物": -4},
+}
+
+# 兴趣 → 推荐地点类型（影响路线构成）
+INTEREST_PLACE_PREFERENCES: dict[str, str] = {
+    "美食": "老字号、小吃街、本地特色餐厅、高评分餐馆",
+    "摄影": "观景台、地标建筑、城市天际线、免费摄影机位、建筑街区",
+    "购物": "核心商圈、购物中心、品牌旗舰店、特色集市",
+    "自然风光": "公园、湖泊、山景、海滨、户外徒步路线",
+    "户外": "徒步路线、山地、骑行道、户外营地",
+    "人文历史": "博物馆、历史街区、古迹遗址、名人故居",
+    "亲子": "动物园、科技馆、主题乐园、亲子友好景区",
+    "夜生活": "酒吧街、演出场馆、夜市、滨江夜景",
+    "休闲度假": "咖啡馆、温泉、海滨步道、度假村",
+    "艺术": "美术馆、艺术馆、创意园区、展览",
+    "展览": "美术馆、科技馆、特展场馆",
+    "深度游": "小众街区、在地文化体验、手工作坊",
+}
+
+
+def place_preferences(interests: list[str], travel_style: str = "") -> list[str]:
+    """Collect place-type preferences from interests + travel style."""
+    preferences = []
+    for key in interests:
+        value = INTEREST_PLACE_PREFERENCES.get(key)
+        if value:
+            preferences.append(f"{key}：{value}")
+    style_value = INTEREST_PLACE_PREFERENCES.get(travel_style)
+    if style_value:
+        preferences.append(f"旅行类型{travel_style}：{style_value}")
+    return preferences
+
 
 def adjust_ratio(base: dict[str, float], interests: list[str]) -> dict[str, float]:
     """Return a budget ratio adjusted by the user's interest preferences."""
     ratio = dict(base)
     for interest in interests:
-        weights = INTEREST_WEIGHTS.get(interest)
+        weights = INTEREST_WEIGHTS.get(interest) or TRAVEL_STYLE_WEIGHTS.get(
+            interest
+        )
         if not weights:
             continue
         for category, delta in weights.items():
@@ -49,4 +94,3 @@ def adjust_ratio(base: dict[str, float], interests: list[str]) -> dict[str, floa
     if total <= 0:
         return dict(base)
     return {k: v / total for k, v in ratio.items()}
-

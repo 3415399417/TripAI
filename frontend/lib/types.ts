@@ -47,11 +47,15 @@ export interface Trip {
   budget: number;
   pace: string;
   interests: string[];
+  travel_style?: string;
   traveler_profile: string | null;
   consumption_level: string | null;
   budget_min: number | null;
   budget_max: number | null;
   budget_breakdown: Record<string, number>;
+  city_level: string | null;
+  city_factor: number | null;
+  daily_budget: number | null;
   status: string;
   created_at: string;
   updated_at: string;
@@ -67,6 +71,7 @@ export interface TripCreate {
   budget: number;
   pace: string;
   interests: string[];
+  travel_style?: string;
 }
 
 export interface AIGenerateResponse {
