@@ -66,9 +66,42 @@ class AIItineraryDay(BaseModel):
     items: List[AIPlaceItem] = Field(min_length=1)
 
 
+class BudgetRange(BaseModel):
+    min: float = Field(default=0, ge=0)
+    max: float = Field(default=0, ge=0)
+
+    @field_validator("min", "max", mode="before")
+    @classmethod
+    def _parse_budget_amount(cls, value: Any) -> float:
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            match = re.search(r"\d+(?:\.\d+)?", value.replace(",", ""))
+            return float(match.group()) if match else 0.0
+        return 0.0
+
+
 class AIGenerateResult(BaseModel):
     title: str | None = None
+    traveler_profile: str | None = None
+    consumption_level: str | None = None
+    budget_range: BudgetRange | None = None
+    budget_breakdown: dict[str, float] = Field(default_factory=dict)
     days: List[AIItineraryDay] = Field(min_length=1)
+
+    @field_validator("budget_breakdown", mode="before")
+    @classmethod
+    def _parse_breakdown(cls, value: Any) -> dict[str, float]:
+        if not isinstance(value, dict):
+            return {}
+        parsed: dict[str, float] = {}
+        for key, amount in value.items():
+            if isinstance(amount, (int, float)):
+                parsed[str(key)] = float(amount)
+            elif isinstance(amount, str):
+                match = re.search(r"\d+(?:\.\d+)?", amount.replace(",", ""))
+                parsed[str(key)] = float(match.group()) if match else 0.0
+        return parsed
 
 
 class AIGenerateResponse(BaseModel):

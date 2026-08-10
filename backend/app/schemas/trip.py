@@ -65,6 +65,11 @@ class TripOut(BaseModel):
     budget: float
     pace: str
     interests: List[str]
+    traveler_profile: str | None = None
+    consumption_level: str | None = None
+    budget_min: float | None = None
+    budget_max: float | None = None
+    budget_breakdown: dict[str, float] = Field(default_factory=dict)
     status: str
     created_at: datetime
     updated_at: datetime
@@ -74,6 +79,10 @@ class TripOut(BaseModel):
     def from_trip(cls, trip: Trip) -> "TripOut":
         interests = json.loads(trip.interests or "[]")
         schedules = [ScheduleItemOut.model_validate(s) for s in trip.schedules]
+        try:
+            breakdown = json.loads(trip.budget_breakdown or "{}")
+        except (ValueError, TypeError):
+            breakdown = {}
         return cls(
             id=trip.id,
             title=trip.title,
@@ -84,9 +93,13 @@ class TripOut(BaseModel):
             budget=trip.budget,
             pace=trip.pace,
             interests=interests,
+            traveler_profile=trip.traveler_profile,
+            consumption_level=trip.consumption_level,
+            budget_min=trip.budget_min,
+            budget_max=trip.budget_max,
+            budget_breakdown=breakdown if isinstance(breakdown, dict) else {},
             status=trip.status,
             created_at=trip.created_at,
             updated_at=trip.updated_at,
             schedules=schedules,
         )
-

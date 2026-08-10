@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -38,3 +38,31 @@ def init_db() -> None:
     from app import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _apply_light_migrations()
+
+
+def _apply_light_migrations() -> None:
+    """Add newly introduced columns to an existing `trips` table.
+
+    `create_all` does not alter existing tables, so new columns are added
+    explicitly after inspecting the current columns.
+    """
+    try:
+        inspector = inspect(engine)
+        if "trips" not in inspector.get_table_names():
+            return
+        existing = {column["name"] for column in inspector.get_columns("trips")}
+        wanted = {
+            "traveler_profile": "VARCHAR(255)",
+            "consumption_level": "VARCHAR(32)",
+            "budget_min": "FLOAT",
+            "budget_max": "FLOAT",
+            "budget_breakdown": "TEXT",
+        }
+        with engine.begin() as conn:
+            for column, ddl in wanted.items():
+                if column not in existing:
+                    conn.execute(text(f"ALTER TABLE trips ADD COLUMN {column} {ddl}"))
+    except Exception:
+        # Failures here are non-fatal; app code tolerates missing attributes.
+        pass

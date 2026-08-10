@@ -29,38 +29,84 @@ class LLMError(Exception):
     """Raised when the LLM call or its output validation fails."""
 
 
-SYSTEM_PROMPT = """你是一名专业的旅行规划师，擅长根据用户需求设计节奏合理、可执行的每日行程。
-请始终输出严格的 JSON（不要 Markdown 代码块，不要额外解释），格式如下：
+SYSTEM_PROMPT = """你是一位专业的智能旅行规划师。核心原则：用户填写的预算是消费能力和旅行期望，不是必须花完的钱。你要判断消费等级，并结合城市消费水平、旅行天数、兴趣偏好，生成个性化行程和预算规划。
+
+## 一、判断消费等级
+先计算：人均每日预算 = 总预算 ÷ 人数 ÷ 天数。
+再按目的地城市消费水平修正：
+- 一线城市（北京/上海/广州/深圳）：系数 1.0
+- 新一线城市（成都/杭州/重庆/武汉/西安/苏州/天津/南京/长沙/郑州/东莞/青岛/沈阳/宁波/昆明等）：系数 0.85
+- 二线城市：系数 0.7
+- 三四线及小众旅游城市：系数 0.55
+
+有效人均日预算 = 人均每日预算 ÷ 城市系数。分档：
+- 经济型：有效人均日预算 ≤ 400 元
+- 舒适型：400～1000 元
+- 高品质：1000～2500 元
+- 奢华型：> 2500 元
+
+示例：上海3天2人预算3000元，人均每日500元，属于经济偏舒适，应按经济型执行，实际消费控制在2500元左右，剩余作为弹性资金；上海3天1人预算30000元，人均每日10000元，属于奢华型，必须按高品质/奢华标准规划，绝不能按低消费标准。
+
+## 二、预算分配参考比例（占总预算）
+- 经济型：住宿32%、餐饮26%、交通16%、景点门票12%、娱乐体验6%、购物4%、备用4%
+- 舒适型：住宿35%、餐饮24%、交通15%、景点门票10%、娱乐体验7%、购物5%、备用4%
+- 高品质：住宿40%、餐饮22%、交通14%、景点门票8%、娱乐体验8%、购物5%、备用3%
+- 奢华型：住宿45%、餐饮20%、交通12%、景点门票6%、娱乐体验10%、购物5%、备用2%
+
+结合兴趣动态调整：
+- 美食偏好：提高餐饮占比（可上调5～10个百分点），相应降低住宿或购物
+- 摄影偏好：增加免费/高价值景观机位，控制购物
+- 购物偏好：提高购物占比，安排商圈时间
+- 自然偏好：增加户外/景区体验
+
+所有地点 cost_estimate 均为人均花费。预算分配合计应落在建议预算区间内，且不得超过用户总预算。备用资金体现"预算不是必须花完"的原则。
+
+## 三、旅行节奏与天数
+- 1～2天：每天4～5个点，优先核心景点，密度较高
+- 3～4天：每天3～4个点，核心+特色搭配
+- 5天以上：每天2～3个点，增加休闲时间，避免赶路
+
+第一天和最后一天适当考虑到达/返程交通，中间日期是主要体验消费。
+
+## 四、住宿必须体现等级
+每天行程末尾安排一个住宿地点（category为"住宿"，如"XX酒店"或"XX区域住宿推荐"），品质必须与消费等级匹配：经济型=经济连锁/青旅；舒适型=舒适型酒店；高品质=四星及以上酒店；奢华型=五星奢华酒店。入住时间建议 20:00 后。
+
+## 五、输出 JSON（必须严格 JSON，不要 Markdown 代码块，不要额外解释）
 {
   "title": "行程标题",
+  "traveler_profile": "旅行画像，如：上海3天经济型城市探索旅行者",
+  "consumption_level": "经济型|舒适型|高品质|奢华型",
+  "budget_range": {"min": 建议最低消费, "max": 建议最高消费},
+  "budget_breakdown": {"住宿": 金额, "餐饮": 金额, "交通": 金额, "景点门票": 金额, "娱乐体验": 金额, "购物": 金额, "备用资金": 金额},
   "days": [
     {
       "day": 1,
       "items": [
         {
-          "name": "景点/地点名称",
+          "name": "地点名称",
           "category": "景点|美食|购物|住宿|交通|休闲",
           "latitude": 经度坐标或null,
           "longitude": 纬度坐标或null,
-          "reason": "为什么推荐这里",
-          "cost_estimate": 人均预估花费(元),
-          "duration_minutes": 建议停留时长(分钟),
+          "reason": "一句话推荐理由(不超过25字)",
+          "cost_estimate": 人均花费(元),
+          "duration_minutes": 建议停留分钟数,
           "transport": "到达这里的交通方式",
-          "recommended_time": "建议时间段，如 09:00-11:00"
+          "recommended_time": "建议时间，如09:00-11:00"
         }
       ]
     }
   ]
 }
-要求：
-1. 所有地点必须真实存在于用户指定的目的地城市，严禁推荐其他城市的地点。
-2. 每个地点给出中文名，尽量真实、知名、可在地图上找到；同一天不要安排重复地点，整个行程尽量避免重复。
-3. 每天 3 个地点，最多 4 个，按地理位置就近安排，减少来回奔波。
-4. 行程天数要与用户填写的日期区间一致。
-5. 预算、人数、兴趣偏好、旅行节奏必须体现在行程和花费估计里。
-6. 如果无法确定坐标，latitude/longitude 可以给 null，后端会自行校正。
-7. reason 用一句话写推荐理由，不超过 25 个字。
-"""
+
+## 六、地点要求
+1. 所有地点必须真实存在于用户指定目的地城市，严禁推荐其他城市的地点
+2. 中文名称，真实、知名、地图上可搜到；同一天不重复，整个行程避免重复
+3. 按地理位置就近安排路线，减少来回奔波
+4. 行程天数必须与用户填写的日期区间一致
+5. 预算、人数、兴趣偏好、旅行节奏必须体现在行程和花费估计中
+6. 无法确定坐标时 latitude/longitude 给 null，后端会自动校正
+7. reason 用一句话，不超过25字
+8. 高预算绝不能用低消费标准规划，低预算绝不推荐奢侈消费；住宿、餐饮、交通品质必须与消费等级一致"""
 
 
 def generate_itinerary(req: TripCreate, feedback: str | None = None) -> AIGenerateResult:
@@ -276,6 +322,117 @@ def _parse_json(text: str) -> dict[str, Any]:
 
 # ---------------------------------------------------------------- mock mode
 
+_CITY_FACTOR_LEVELS: dict[str, float] = {
+    "北京": 1.0,
+    "上海": 1.0,
+    "广州": 1.0,
+    "深圳": 1.0,
+    "成都": 0.85,
+    "杭州": 0.85,
+    "重庆": 0.85,
+    "武汉": 0.85,
+    "西安": 0.85,
+    "苏州": 0.85,
+    "天津": 0.85,
+    "南京": 0.85,
+    "长沙": 0.85,
+    "郑州": 0.85,
+    "东莞": 0.85,
+    "青岛": 0.85,
+    "沈阳": 0.85,
+    "宁波": 0.85,
+    "昆明": 0.85,
+}
+
+_LEVEL_RATIOS: dict[str, dict[str, float]] = {
+    "经济型": {
+        "住宿": 0.32,
+        "餐饮": 0.26,
+        "交通": 0.16,
+        "景点门票": 0.12,
+        "娱乐体验": 0.06,
+        "购物": 0.04,
+        "备用资金": 0.04,
+    },
+    "舒适型": {
+        "住宿": 0.35,
+        "餐饮": 0.24,
+        "交通": 0.15,
+        "景点门票": 0.10,
+        "娱乐体验": 0.07,
+        "购物": 0.05,
+        "备用资金": 0.04,
+    },
+    "高品质": {
+        "住宿": 0.40,
+        "餐饮": 0.22,
+        "交通": 0.14,
+        "景点门票": 0.08,
+        "娱乐体验": 0.08,
+        "购物": 0.05,
+        "备用资金": 0.03,
+    },
+    "奢华型": {
+        "住宿": 0.45,
+        "餐饮": 0.20,
+        "交通": 0.12,
+        "景点门票": 0.06,
+        "娱乐体验": 0.10,
+        "购物": 0.05,
+        "备用资金": 0.02,
+    },
+}
+
+_LEVEL_TAGS: dict[str, str] = {
+    "经济型": "城市探索",
+    "舒适型": "品质休闲",
+    "高品质": "深度体验",
+    "奢华型": "尊享之旅",
+}
+
+
+def _city_cost_factor(destination: str) -> float:
+    """Rough cost-of-living factor used to judge consumption level."""
+    return _CITY_FACTOR_LEVELS.get(destination, 0.7)
+
+
+def compute_budget_plan(req: TripCreate) -> dict[str, Any]:
+    """Determine consumption level, suggested range and budget breakdown.
+
+    Budget is interpreted as spending power, not a target to be fully spent.
+    """
+    days = (req.end_date - req.start_date).days + 1
+    per_day = req.budget / max(days, 1) / max(req.travelers, 1)
+    effective = per_day / _city_cost_factor(req.destination)
+    if effective <= 400:
+        level = "经济型"
+    elif effective <= 1000:
+        level = "舒适型"
+    elif effective <= 2500:
+        level = "高品质"
+    else:
+        level = "奢华型"
+
+    interest = req.interests[0] if req.interests else ""
+    profile = f"{req.destination}{days}天{level}"
+    if interest:
+        profile += f"·{interest}偏好"
+    profile += _LEVEL_TAGS[level] + "旅行者"
+
+    base = round(req.budget * 0.9)
+    breakdown = {
+        key: round(base * ratio) for key, ratio in _LEVEL_RATIOS[level].items()
+    }
+    return {
+        "profile": profile,
+        "level": level,
+        "budget_range": {
+            "min": round(req.budget * 0.85),
+            "max": round(req.budget * 0.93),
+        },
+        "budget_breakdown": breakdown,
+    }
+
 _CITY_COORDS: dict[str, tuple[float, float]] = {
     "上海": (121.4737, 31.2304),
     "北京": (116.4074, 39.9042),
@@ -351,7 +508,12 @@ def _mock_itinerary(req: TripCreate) -> AIGenerateResult:
             "longitude": round(lng + offset * 0.01, 6),
         }
 
+    plan = compute_budget_plan(req)
     return AIGenerateResult(
+        traveler_profile=plan["profile"],
+        consumption_level=plan["level"],
+        budget_range=plan["budget_range"],
+        budget_breakdown=plan["budget_breakdown"],
         title=f"{req.destination} {days_count}天旅行计划",
         days=[
             {

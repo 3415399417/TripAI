@@ -47,6 +47,11 @@ export interface Trip {
   budget: number;
   pace: string;
   interests: string[];
+  traveler_profile: string | null;
+  consumption_level: string | null;
+  budget_min: number | null;
+  budget_max: number | null;
+  budget_breakdown: Record<string, number>;
   status: string;
   created_at: string;
   updated_at: string;
@@ -69,4 +74,3 @@ export interface AIGenerateResponse {
   mock: boolean;
   message: string;
 }
-

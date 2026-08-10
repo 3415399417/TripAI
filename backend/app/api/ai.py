@@ -10,7 +10,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.trip import Trip
 from app.models.user import User
-from app.schemas.ai import AIGenerateResponse, ReoptimizeRequest
+from app.schemas.ai import AIGenerateResponse, BudgetRange, ReoptimizeRequest
 from app.schemas.trip import TripCreate, TripOut
 from app.services import ai_service
 from app.services.ai_service import LLMError
@@ -65,6 +65,19 @@ def generate_trip(
         db.delete(trip)
         db.commit()
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    if not result.traveler_profile:
+        plan = ai_service.compute_budget_plan(payload)
+        result.traveler_profile = plan["profile"]
+        result.consumption_level = plan["level"]
+        result.budget_range = BudgetRange(**plan["budget_range"])
+        result.budget_breakdown = plan["budget_breakdown"]
+    trip.traveler_profile = result.traveler_profile
+    trip.consumption_level = result.consumption_level
+    if result.budget_range:
+        trip.budget_min = result.budget_range.min
+        trip.budget_max = result.budget_range.max
+    trip.budget_breakdown = json.dumps(result.budget_breakdown, ensure_ascii=False)
 
     trip.status = "generated"
     db.commit()

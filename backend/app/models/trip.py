@@ -25,6 +25,11 @@ class Trip(Base):
     budget: Mapped[float] = mapped_column(Float, default=0)
     pace: Mapped[str] = mapped_column(String(32), default="适中")
     interests: Mapped[str] = mapped_column(Text, default="[]")  # JSON array
+    traveler_profile: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    consumption_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    budget_min: Mapped[float | None] = mapped_column(Float, nullable=True)
+    budget_max: Mapped[float | None] = mapped_column(Float, nullable=True)
+    budget_breakdown: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
     status: Mapped[str] = mapped_column(String(32), default="draft")  # draft|generated
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -61,4 +66,3 @@ class Schedule(Base):
 
     trip: Mapped[Trip] = relationship(back_populates="schedules")
     place: Mapped[Place] = relationship()
-
