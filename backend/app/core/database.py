@@ -41,6 +41,39 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine)
     _apply_light_migrations()
+    _seed_prompt_version()
+
+
+def _seed_prompt_version() -> None:
+    """Snapshot the current SYSTEM_PROMPT into prompt_versions once per hash."""
+    try:
+        import hashlib
+        import time
+
+        from app.models.prompt_version import PromptVersion
+        from app.services.ai_service import SYSTEM_PROMPT
+
+        prompt_hash = hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest()[:16]
+        with SessionLocal() as db:
+            exists = (
+                db.query(PromptVersion)
+                .filter(PromptVersion.prompt_hash == prompt_hash)
+                .first()
+            )
+            if exists:
+                return
+            count = db.query(PromptVersion).count()
+            db.add(
+                PromptVersion(
+                    version=f"v{count + 1}",
+                    prompt_hash=prompt_hash,
+                    prompt_text=SYSTEM_PROMPT,
+                )
+            )
+            db.commit()
+    except Exception:
+        # 版本建档失败不影响主流程
+        pass
 
 
 def _apply_light_migrations() -> None:

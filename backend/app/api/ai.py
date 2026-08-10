@@ -80,6 +80,90 @@ def _tier_quality_check(result, payload) -> tuple[bool, str]:
     return True, ""
 
 
+_INTEREST_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "美食": ("餐饮", "美食", "小吃", "餐厅", "食"),
+    "购物": ("购物", "商场", "商圈", "品牌"),
+    "亲子": ("亲子", "乐园", "博物馆", "科技馆", "动物园", "海洋馆"),
+    "自然风光": ("公园", "湖", "山", "海", "湿地", "森林"),
+    "户外": ("徒步", "户外", "登山", "骑行"),
+    "人文历史": ("博物馆", "历史", "古", "遗址", "故居", "寺"),
+    "摄影": ("观景", "地标", "塔", "江", "天台", "天际"),
+    "夜生活": ("酒吧", "演出", "夜市", "夜景", "live"),
+    "休闲度假": ("咖啡", "温泉", "海", "度假", "spa"),
+    "艺术": ("美术", "艺术", "展览", "创意"),
+    "展览": ("美术", "艺术", "展览", "科技馆"),
+    "深度游": ("小巷", "街", "在地", "工艺"),
+}
+
+
+def _interest_hit(result, interest: str) -> bool:
+    keywords = _INTEREST_KEYWORDS.get(interest)
+    if not keywords:
+        return True
+    for day in result.days:
+        for item in day.items:
+            text = f"{item.name} {item.category or ''}"
+            if any(keyword in text for keyword in keywords):
+                return True
+    return False
+
+
+def _route_score(result) -> int:
+    """Score how geographically clustered each day's route is."""
+    day_scores: list[int] = []
+    for day in result.days:
+        points = [(i.latitude or 0, i.longitude or 0) for i in day.items]
+        if len(points) < 2:
+            day_scores.append(100)
+            continue
+        spans = [
+            (points[i][0] - points[i - 1][0]) ** 2
+            + (points[i][1] - points[i - 1][1]) ** 2
+            for i in range(1, len(points))
+        ]
+        avg = sum(spans) / len(spans)
+        score = max(0, 100 - round(avg / 0.0008 * 100))
+        day_scores.append(min(100, score))
+    return round(sum(day_scores) / len(day_scores)) if day_scores else 100
+
+
+def _score_plan(result, payload) -> dict:
+    """Rule-based generation score (0-100 per dimension)."""
+    total_cost = _sum_costs(result)
+    budget = max(float(payload.budget or 0), 1)
+    low, high = budget * 0.85, budget * 0.93
+    if low <= total_cost <= high:
+        budget_match = 100
+    elif total_cost < low:
+        budget_match = max(0, 100 - round((low - total_cost) / low * 60))
+    else:
+        budget_match = max(0, 100 - round((total_cost - high) / high * 80))
+
+    interests = payload.interests or []
+    if interests:
+        matched = sum(1 for interest in interests if _interest_hit(result, interest))
+        interest_match = round(matched / len(interests) * 100)
+    else:
+        interest_match = 100
+
+    route_reason = _route_score(result)
+    ok, _ = _tier_quality_check(result, payload)
+    quality_match = 100 if ok else 55
+    total = round(
+        budget_match * 0.3
+        + interest_match * 0.2
+        + route_reason * 0.2
+        + quality_match * 0.3
+    )
+    return {
+        "total": total,
+        "budget_match": budget_match,
+        "interest_match": interest_match,
+        "route_reason": route_reason,
+        "quality_match": quality_match,
+    }
+
+
 @router.post("/generate-trip", response_model=AIGenerateResponse)
 def generate_trip(
     payload: TripCreate,
@@ -106,9 +190,20 @@ def generate_trip(
     try:
         result = ai_service.generate_itinerary(payload)
         ok, quality_feedback = _tier_quality_check(result, payload)
+        score = _score_plan(result, payload)
+        reasons: list[str] = []
         if not ok:
+            reasons.append(quality_feedback)
+        if score["total"] < 75:
+            reasons.append(
+                f"综合评分 {score['total']}/100（预算匹配{score['budget_match']}、"
+                f"兴趣匹配{score['interest_match']}、路线合理{score['route_reason']}、"
+                f"消费符合{score['quality_match']}），请针对性优化："
+                "预算接近建议区间、地点符合兴趣、路线减少跨区奔波、消费档次匹配等级。"
+            )
+        if reasons:
             feedback = (
-                quality_feedback
+                "；".join(reasons)
                 + "，重新输出完整 JSON，保持地点真实且符合目的地城市。"
             )
             result = ai_service.generate_itinerary(payload, feedback=feedback)
@@ -172,6 +267,29 @@ def generate_trip(
     trip.status = "generated"
     db.commit()
     db.refresh(trip)
+
+    from app.models.generation_log import GenerationLog
+
+    db.add(
+        GenerationLog(
+            user_id=user.id,
+            trip_id=trip.id,
+            payload=payload.model_dump_json(),
+            plan=json.dumps(plan, ensure_ascii=False, default=str),
+            prompt=ai_service.last_prompt,
+            ai_output=result.model_dump_json(),
+            final_result=json.dumps(
+                {
+                    "trip_id": trip.id,
+                    "status": trip.status,
+                    "schedules": len(trip.schedules),
+                    "score": _score_plan(result, payload),
+                },
+                ensure_ascii=False,
+            ),
+        )
+    )
+    db.commit()
 
     mock = not settings.LLM_API_KEY
     return AIGenerateResponse(

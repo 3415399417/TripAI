@@ -24,6 +24,9 @@ from app.services import amap_service
 
 settings = get_settings()
 
+# 记录最近一次发送给 LLM 的用户提示（单实例单并发，用于生成日志）
+last_prompt: str | None = None
+
 
 class LLMError(Exception):
     """Raised when the LLM call or its output validation fails."""
@@ -173,6 +176,7 @@ SYSTEM_PROMPT = """你是一位专业的智能旅行规划师。核心原则：�
 
 def generate_itinerary(req: TripCreate, feedback: str | None = None) -> AIGenerateResult:
     """Generate a validated itinerary. Falls back to a mock when no key."""
+    global last_prompt
     if not settings.LLM_API_KEY:
         return _mock_itinerary(req)
 
@@ -201,10 +205,20 @@ def generate_itinerary(req: TripCreate, feedback: str | None = None) -> AIGenera
             f"{season['hotel_factor']} 倍、餐饮 {season['dining_factor']} 倍、"
             f"景点门票 {season['attraction_factor']} 倍，生成地点价格时请按此上浮。"
         )
+    from app.services.weather_service import get_weather
+
+    weather = get_weather(req.destination, req.start_date)
+    if weather and ("雨" in weather["weather"] or "雪" in weather["weather"]):
+        user_content += (
+            f"\n天气预报：{req.start_date} {req.destination} 为"
+            f"{weather['weather']}（{weather['temperature']}°C），"
+            "请优先安排室内地点（博物馆、商场、室内乐园），减少户外项目。"
+        )
     if feedback:
         user_content += (
             "\n\n上一轮生成的行程存在问题，请严格修正后再输出：\n" + feedback
         )
+    last_prompt = user_content
 
     payload = {
         "model": settings.LLM_MODEL,
