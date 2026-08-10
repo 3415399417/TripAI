@@ -112,7 +112,17 @@ SYSTEM_PROMPT = """你是一位专业的智能旅行规划师。核心原则：�
 - 高品质/奢华型行程：总花费应达到建议消费区间下限的 75% 以上，越接近区间中值越好
 - 高等级行程必须包含与等级匹配的地点：高档餐厅人均 150 元以上、高品质酒店每晚 800 元以上（奢华型 1500 元以上）、特色体验项目、精品购物等
 - 经济型/舒适型：保持性价比，总花费也应落在建议消费区间附近（不低于区间下限的 60%）
-- 不允许用大量人均 50 元以下的地点拼凑高预算行程；若当前地点组合总花费过低，请升级部分地点的品质或替换为更高消费的同类真实地点"""
+- 不允许用大量人均 50 元以下的地点拼凑高预算行程；若当前地点组合总花费过低，请升级部分地点的品质或替换为更高消费的同类真实地点
+## 八、消费等级专家规则（必须查表执行）
+各等级专家标准：
+- 经济型：酒店 100-400 元/晚（青旅/连锁/快捷）；餐饮 100-300 元/天/人（小吃/性价比）；交通地铁公交为主；景点以免费+少量收费为主；体验为城市漫步、博物馆
+- 舒适型：酒店 500-1500 元/晚（三星以上/精品/中档民宿）；餐饮 300-800 元/天/人（特色/高评分餐厅）；交通地铁+网约车；景点城市地标+热门景区；体验含演出、游船
+- 高品质：酒店 1500-4000 元/晚（高星/景观/精品设计）；餐饮 1000-3000 元/天/人（米其林/高端/江景）；交通网约车/专车；高质量体验+私人导览
+- 奢华型：酒店 4000 元/晚以上（五星奢华/套房）；餐饮 3000 元/天/人以上（米其林/私人餐厅/高端宴请）；专车/包车/高端车型；VIP体验/私人摄影/高端活动
+
+城市消费系数：一线1.0（北京上海广州深圳）；新一线0.85（成都杭州重庆武汉苏州南京长沙青岛天津郑州）；二线0.7（西安昆明厦门大连无锡佛山福州济南哈尔滨合肥南昌贵阳南宁石家庄三亚）；三四线及旅游城市0.55（大理丽江桂林淄博洛阳黄山张家界凤凰西双版纳北海等）
+
+旅行节奏：1-2天每天3-5个地点；3-5天每天2-4个地点；7天以上每天1-3个地点（深度游）；第一天行程减少30%、最后一天减少50%（考虑到达与返程时间）"""
 
 
 def generate_itinerary(req: TripCreate, feedback: str | None = None) -> AIGenerateResult:
@@ -442,6 +452,11 @@ def compute_budget_plan(req: TripCreate) -> dict[str, Any]:
 
     Budget is interpreted as spending power, not a target to be fully spent.
     """
+    from app.data.rules import build_plan
+
+    return build_plan(req)
+    # The legacy implementation below is kept as reference; build_plan (the
+    # expert knowledge base) is authoritative.
     days = (req.end_date - req.start_date).days + 1
     per_day = req.budget / max(days, 1) / max(req.travelers, 1)
     effective = per_day / _city_cost_factor(req.destination)

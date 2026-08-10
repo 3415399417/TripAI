@@ -31,16 +31,15 @@ def _tier_quality_check(result, payload) -> tuple[bool, str]:
     Budget is spending power, not a spend-all target, so we verify the
     *quality tier* of the plan rather than forcing total spend upward.
     """
+    from app.data import cities, tiers as tier_rules
+
     days = (payload.end_date - payload.start_date).days + 1
     per_day = payload.budget / max(days, 1) / max(payload.travelers, 1)
-    if per_day >= 2500:
-        hotel_min, dining_min, exp_min = 1500, 300, 500
-    elif per_day >= 1000:
-        hotel_min, dining_min, exp_min = 800, 150, 300
-    elif per_day >= 400:
-        hotel_min, dining_min, exp_min = 300, 60, 100
-    else:
-        hotel_min, dining_min, exp_min = 120, 30, 50
+    effective = per_day / cities.city_factor(payload.destination)
+    tier = tier_rules.TIER_RULES[tier_rules.classify(effective)]
+    hotel_min = tier["hotel_range"][0]
+    dining_min = round(tier["dining_per_day"][0] / 3)
+    exp_min = round(tier["hotel_range"][0] / 4)
 
     hotels: list[float] = []
     dining: list[float] = []
@@ -135,12 +134,13 @@ def generate_trip(
         db.commit()
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    if not result.traveler_profile:
-        plan = ai_service.compute_budget_plan(payload)
-        result.traveler_profile = plan["profile"]
-        result.consumption_level = plan["level"]
-        result.budget_range = BudgetRange(**plan["budget_range"])
-        result.budget_breakdown = plan["budget_breakdown"]
+    # 消费等级/预算区间/分配由专家知识库确定性计算并覆盖 AI 输出，
+    # AI 只负责生成符合该等级的地点。
+    plan = ai_service.compute_budget_plan(payload)
+    result.traveler_profile = plan["profile"]
+    result.consumption_level = plan["level"]
+    result.budget_range = BudgetRange(**plan["budget_range"])
+    result.budget_breakdown = plan["budget_breakdown"]
     trip.traveler_profile = result.traveler_profile
     trip.consumption_level = result.consumption_level
     if result.budget_range:
