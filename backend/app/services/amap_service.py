@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import re
+
 import httpx
 from sqlalchemy.orm import Session
 
@@ -39,7 +41,7 @@ def search_places(query: str, city: str | None = None, limit: int = 5) -> list[d
         "keywords": query,
         "offset": str(limit),
         "page": "1",
-        "extensions": "base",
+        "extensions": "all",
     }
     if city:
         params["city"] = city
@@ -61,6 +63,9 @@ def search_places(query: str, city: str | None = None, limit: int = 5) -> list[d
         lng, lat = location.split(",", 1)
         if not lng or not lat:
             continue
+        biz_ext = poi.get("biz_ext") or {}
+        cost = _parse_cost(biz_ext.get("cost"))
+        rating = _to_float(biz_ext.get("rating")) or _to_float(poi.get("rating"))
         results.append(
             {
                 "amap_id": poi.get("id"),
@@ -70,11 +75,23 @@ def search_places(query: str, city: str | None = None, limit: int = 5) -> list[d
                 "category": poi.get("type") or None,
                 "latitude": float(lat),
                 "longitude": float(lng),
-                "rating": _to_float(poi.get("rating")),
+                "rating": rating,
+                "cost": cost,
                 "image_url": None,
             }
         )
     return results
+
+
+def _parse_cost(value: Any) -> float | None:
+    """Extract a numeric per-capita cost from AMap's biz_ext.cost field."""
+    raw = value
+    if isinstance(raw, list):
+        raw = raw[0] if raw else None
+    if raw is None:
+        return None
+    match = re.search(r"\d+(?:\.\d+)?", str(raw))
+    return float(match.group()) if match else None
 
 
 def upsert_place(db: Session, data: dict[str, Any]) -> Place:
@@ -127,6 +144,7 @@ def enrich_place(
             "latitude": float(lat) if lat else 0.0,
             "longitude": float(lng) if lng else 0.0,
             "rating": None,
+            "cost": None,
             "image_url": None,
         },
     )
@@ -137,4 +155,3 @@ def _to_float(value: Any) -> float | None:
         return float(value) if value not in (None, "") else None
     except (TypeError, ValueError):
         return None
-

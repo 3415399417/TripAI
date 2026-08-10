@@ -183,6 +183,11 @@ def save_itinerary(
                     "longitude": item.longitude,
                 },
             )
+            cost_estimate = (
+                float(place.cost)
+                if place.cost
+                else _calibrate_cost(item.category, item.cost_estimate)
+            )
             db.add(
                 Schedule(
                     trip_id=trip.id,
@@ -191,7 +196,7 @@ def save_itinerary(
                     place_id=place.id,
                     recommended_time=item.recommended_time,
                     duration_minutes=item.duration_minutes,
-                    cost_estimate=item.cost_estimate,
+                    cost_estimate=cost_estimate,
                     transport=item.transport,
                     reason=item.reason,
                 )
@@ -321,6 +326,36 @@ def _parse_json(text: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------- mock mode
+
+_COST_RANGES: dict[str, tuple[float, float]] = {
+    "美食": (15, 800),
+    "餐饮": (15, 800),
+    "景点": (0, 500),
+    "门票": (0, 500),
+    "住宿": (80, 5000),
+    "娱乐": (0, 1000),
+    "购物": (0, 5000),
+    "交通": (0, 800),
+}
+
+
+def _calibrate_cost(category: str | None, value: float | None) -> float:
+    """Clamp an LLM cost guess to a plausible range for its category.
+
+    AMap's real per-capita cost wins when available; otherwise this keeps
+    model estimates from being wildly off from typical market prices.
+    """
+    low, high = 0.0, 100000.0
+    if category:
+        for key, (lo, hi) in _COST_RANGES.items():
+            if key in category:
+                low, high = lo, hi
+                break
+    try:
+        num = float(value or 0)
+    except (TypeError, ValueError):
+        num = 0.0
+    return max(low, min(high, num))
 
 _CITY_FACTOR_LEVELS: dict[str, float] = {
     "北京": 1.0,

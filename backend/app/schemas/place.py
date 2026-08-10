@@ -11,6 +11,7 @@ class PlaceOut(BaseModel):
     latitude: float
     longitude: float
     rating: float | None
+    cost: float | None
     image_url: str | None
 
     model_config = {"from_attributes": True}
@@ -26,5 +27,5 @@ class PlaceSearchResult(BaseModel):
     latitude: float
     longitude: float
     rating: float | None
+    cost: float | None
     image_url: str | None
-

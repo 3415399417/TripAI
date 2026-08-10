@@ -25,6 +25,10 @@ export default function TripBudgetCard({ trip }: { trip: Trip }) {
   const breakdown = trip.budget_breakdown ?? {};
   const total = Object.values(breakdown).reduce((sum, v) => sum + Number(v || 0), 0) || 1;
   const entries = BREAKDOWN_ORDER.filter((key) => breakdown[key] != null);
+  const totalCost = (trip.schedules ?? []).reduce(
+    (sum, it) => sum + (Number(it.cost_estimate) || 0),
+    0
+  );
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -48,6 +52,14 @@ export default function TripBudgetCard({ trip }: { trip: Trip }) {
           <span className="mx-1 text-slate-300">|</span>
           总预算 ¥{trip.budget}
           <span className="text-slate-400">（预算不等于必须花完，剩余作为弹性资金）</span>
+        </p>
+      )}
+
+      {trip.budget > 0 && totalCost > 0 && (
+        <p className="mt-1 text-xs text-slate-500">
+          行程地点预估合计 ¥{totalCost}
+          <span className="mx-1 text-slate-300">|</span>
+          占预算 {Math.round((totalCost / trip.budget) * 100)}%
         </p>
       )}
 

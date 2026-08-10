@@ -63,6 +63,11 @@ def _apply_light_migrations() -> None:
             for column, ddl in wanted.items():
                 if column not in existing:
                     conn.execute(text(f"ALTER TABLE trips ADD COLUMN {column} {ddl}"))
+        if "places" in inspector.get_table_names():
+            place_columns = {column["name"] for column in inspector.get_columns("places")}
+            if "cost" not in place_columns:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE places ADD COLUMN cost FLOAT"))
     except Exception:
         # Failures here are non-fatal; app code tolerates missing attributes.
         pass
