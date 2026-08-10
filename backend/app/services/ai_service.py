@@ -281,18 +281,42 @@ def save_itinerary(
     fallback = 0
     filtered = 0
     for day in result.days:
+        from concurrent.futures import ThreadPoolExecutor
+
+        def _fetch(item):
+            try:
+                results = amap_service.search_places(
+                    item.name, city_hint or trip.destination, limit=1
+                )
+                return item, (results[0] if results else None)
+            except Exception:
+                return item, None
+
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            fetched = list(pool.map(_fetch, day.items))
         enriched: list[tuple] = []
-        for item in day.items:
-            place = amap_service.enrich_place(
-                db,
-                item.name,
-                city_hint or trip.destination,
-                {
-                    "category": item.category,
-                    "latitude": item.latitude,
-                    "longitude": item.longitude,
-                },
-            )
+        for item, amap_result in fetched:
+            if amap_result:
+                place = amap_service.upsert_place(db, amap_result)
+            else:
+                fallback += 1
+                lat = item.latitude
+                lng = item.longitude
+                place = amap_service.upsert_place(
+                    db,
+                    {
+                        "amap_id": None,
+                        "name": item.name,
+                        "address": None,
+                        "city": city_hint or trip.destination,
+                        "category": item.category,
+                        "latitude": float(lat) if lat else 0.0,
+                        "longitude": float(lng) if lng else 0.0,
+                        "rating": None,
+                        "cost": None,
+                        "image_url": None,
+                    },
+                )
             if not place_matches(place.category, traveler_group):
                 filtered += 1
                 continue
@@ -306,8 +330,6 @@ def save_itinerary(
             )
             enriched.append((place, item, cost_estimate))
             total += 1
-            if not place.amap_id:
-                fallback += 1
         ordered = _order_by_nearest(enriched, city_hint or trip.destination)
         time_slots = [
             it.recommended_time for _, it, _ in ordered if it.recommended_time

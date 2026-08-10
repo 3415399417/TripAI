@@ -40,3 +40,4 @@ app.include_router(places.router, prefix=settings.API_PREFIX)
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
