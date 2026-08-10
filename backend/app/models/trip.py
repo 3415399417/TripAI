@@ -26,6 +26,7 @@ class Trip(Base):
     pace: Mapped[str] = mapped_column(String(32), default="适中")
     interests: Mapped[str] = mapped_column(Text, default="[]")  # JSON array
     travel_style: Mapped[str] = mapped_column(String(32), default="城市探索")
+    traveler_group: Mapped[str] = mapped_column(String(16), default="成人")
     traveler_profile: Mapped[str | None] = mapped_column(String(255), nullable=True)
     consumption_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
     budget_min: Mapped[float | None] = mapped_column(Float, nullable=True)

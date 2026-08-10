@@ -159,6 +159,23 @@ def generate_itinerary(req: TripCreate, feedback: str | None = None) -> AIGenera
         return _mock_itinerary(req)
 
     user_content = build_user_prompt(req)
+    plan = compute_budget_plan(req)
+    place_prefs = plan.get("place_preferences") or []
+    if place_prefs:
+        user_content += (
+            "\n地点类型偏好（生成地点时请优先安排这些类型）：\n- "
+            + "\n- ".join(place_prefs)
+        )
+    constraints = plan.get("constraints") or {}
+    if constraints.get("notes"):
+        user_content += f"\n旅行约束（必须遵守）：{constraints['notes']}"
+    season = plan.get("season") or {}
+    if season.get("label") and season["label"] != "平日":
+        user_content += (
+            f"\n出行时间价格提示：{season['label']}期间，酒店约为平日 "
+            f"{season['hotel_factor']} 倍、餐饮 {season['dining_factor']} 倍、"
+            f"景点门票 {season['attraction_factor']} 倍，生成地点价格时请按此上浮。"
+        )
     if feedback:
         user_content += (
             "\n\n上一轮生成的行程存在问题，请严格修正后再输出：\n" + feedback
@@ -200,6 +217,8 @@ def build_user_prompt(req: TripCreate) -> str:
         f"人数：{req.travelers} 人\n"
         f"总预算：{req.budget:.0f} 元\n"
         f"兴趣偏好：{interests}\n"
+        f"旅行类型：{req.travel_style or '城市探索'}\n"
+        f"随行人群：{req.traveler_group or '成人'}\n"
         f"旅行节奏：{req.pace}\n"
         f"请生成一份完整的每日行程。"
     )
@@ -207,16 +226,24 @@ def build_user_prompt(req: TripCreate) -> str:
 
 def save_itinerary(
     db: Session, trip: Trip, result: AIGenerateResult, city_hint: str | None
-) -> tuple[int, int]:
-    """Persist itinerary items. Returns (total, fallback) place counts.
+) -> tuple[int, int, int]:
+    """Persist itinerary items. Returns (total, fallback, filtered) counts.
 
     `fallback` counts places where AMap could not confirm a match, meaning
     the LLM-provided coordinates are used as-is (possible wrong city).
+    `filtered` counts places rejected because they conflict with the
+    traveler group (e.g. bars in a family trip). Places are re-ordered per
+    day with a nearest-neighbour heuristic to cut transit time.
     """
+    from app.data.traveler_constraints import place_matches
+
+    traveler_group = trip.traveler_group or "成人"
     total = 0
     fallback = 0
+    filtered = 0
     for day in result.days:
-        for idx, item in enumerate(day.items):
+        enriched: list[tuple] = []
+        for item in day.items:
             place = amap_service.enrich_place(
                 db,
                 item.name,
@@ -227,29 +254,72 @@ def save_itinerary(
                     "longitude": item.longitude,
                 },
             )
+            if not place_matches(place.category, traveler_group):
+                filtered += 1
+                continue
+            if "暂停开放" in (place.name or "") or "暂停营业" in (place.name or ""):
+                filtered += 1
+                continue
             cost_estimate = (
                 float(place.cost)
                 if place.cost
                 else _calibrate_cost(item.category, item.cost_estimate)
             )
+            enriched.append((place, item, cost_estimate))
+            total += 1
+            if not place.amap_id:
+                fallback += 1
+        ordered = _order_by_nearest(enriched, city_hint or trip.destination)
+        time_slots = [
+            it.recommended_time for _, it, _ in ordered if it.recommended_time
+        ]
+        for idx, (place, item, cost_estimate) in enumerate(ordered):
+            recommended_time = item.recommended_time
+            if time_slots:
+                recommended_time = time_slots[idx % len(time_slots)]
             db.add(
                 Schedule(
                     trip_id=trip.id,
                     day=day.day,
                     order_index=idx,
                     place_id=place.id,
-                    recommended_time=item.recommended_time,
+                    recommended_time=recommended_time,
                     duration_minutes=item.duration_minutes,
                     cost_estimate=cost_estimate,
                     transport=item.transport,
                     reason=item.reason,
                 )
             )
-            total += 1
-            if not place.amap_id:
-                fallback += 1
     db.commit()
-    return total, fallback
+    return total, fallback, filtered
+
+
+def _order_by_nearest(
+    items: list[tuple], city_hint: str | None
+) -> list[tuple]:
+    """Greedy nearest-neighbour ordering; hotel stops go last."""
+    if len(items) <= 1:
+        return items
+    hotels = [x for x in items if "住宿" in (x[0].category or "")]
+    others = [x for x in items if "住宿" not in (x[0].category or "")]
+    start_lng, start_lat = _CITY_COORDS.get(city_hint or "", (116.4074, 39.9042))
+    ordered: list[tuple] = []
+    current = (start_lat, start_lng)
+    remaining = list(others)
+    while remaining:
+        best = min(
+            remaining,
+            key=lambda x: _dist_sq(current, (x[0].latitude, x[0].longitude)),
+        )
+        remaining.remove(best)
+        ordered.append(best)
+        current = (best[0].latitude, best[0].longitude)
+    return ordered + hotels
+
+
+def _dist_sq(a: tuple[float, float], b: tuple[float, float]) -> float:
+    """Squared lat/lng distance, good enough for ordering."""
+    return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2
 
 
 def save_reoptimized(

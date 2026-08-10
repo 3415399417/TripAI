@@ -112,7 +112,7 @@ def generate_trip(
                 + "，重新输出完整 JSON，保持地点真实且符合目的地城市。"
             )
             result = ai_service.generate_itinerary(payload, feedback=feedback)
-        total, fallback = ai_service.save_itinerary(
+        total, fallback, filtered = ai_service.save_itinerary(
             db, trip, result, city_hint=payload.destination
         )
         # 质量守护：大部分地点无法在目的地城市确认时，带反馈重试一次
@@ -120,6 +120,20 @@ def generate_trip(
             feedback = (
                 f"上一轮输出中部分地点无法在目的地 {payload.destination} 确认，"
                 f"请只推荐 {payload.destination} 的真实地点，重新输出完整 JSON。"
+            )
+            result = ai_service.generate_itinerary(payload, feedback=feedback)
+            from app.models.trip import Schedule
+
+            db.query(Schedule).filter(Schedule.trip_id == trip.id).delete()
+            db.flush()
+            ai_service.save_itinerary(
+                db, trip, result, city_hint=trip.destination
+            )
+        elif filtered > 0 and filtered / max(total + filtered, 1) > 0.3:
+            feedback = (
+                f"上一轮有 {filtered} 个地点不适合随行人群"
+                f"（{payload.traveler_group or '成人'}），例如酒吧/夜店不适合儿童、"
+                "高强度项目不适合老人。请重新生成符合该人群的完整行程。"
             )
             result = ai_service.generate_itinerary(payload, feedback=feedback)
             from app.models.trip import Schedule

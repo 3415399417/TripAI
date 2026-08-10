@@ -64,6 +64,7 @@ def _apply_light_migrations() -> None:
             "city_level": "VARCHAR(32)",
             "city_factor": "FLOAT",
             "daily_budget": "FLOAT",
+            "traveler_group": "VARCHAR(16)",
         }
         with engine.begin() as conn:
             for column, ddl in wanted.items():

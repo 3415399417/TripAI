@@ -33,6 +33,8 @@ const STYLE_OPTIONS = [
   "康养休闲",
 ];
 
+const GROUP_OPTIONS = ["成人", "老人", "儿童", "情侣"];
+
 interface TripFormProps {
   initialDestination?: string;
   initialInterests?: string[];
@@ -51,6 +53,7 @@ export default function TripForm({
   const [pace, setPace] = useState("适中");
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [travelStyle, setTravelStyle] = useState("城市探索");
+  const [travelerGroup, setTravelerGroup] = useState("成人");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -76,6 +79,7 @@ export default function TripForm({
       pace,
       interests,
       travel_style: travelStyle,
+      traveler_group: travelerGroup,
     };
 
     setLoading(true);
@@ -201,6 +205,25 @@ export default function TripForm({
               }`}
             >
               {s}
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      <Field label="随行人群">
+        <div className="flex flex-wrap gap-2">
+          {GROUP_OPTIONS.map((g) => (
+            <button
+              type="button"
+              key={g}
+              onClick={() => setTravelerGroup(g)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                travelerGroup === g
+                  ? "border-teal-600 bg-teal-50 text-teal-700"
+                  : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
+              }`}
+            >
+              {g}
             </button>
           ))}
         </div>

@@ -19,6 +19,7 @@ class TripCreate(BaseModel):
     pace: str = Field(default="适中", max_length=32)
     interests: List[str] = Field(default_factory=list)
     travel_style: str = Field(default="城市探索", max_length=32)
+    traveler_group: str = Field(default="成人", max_length=16)
 
 
 class TripUpdate(BaseModel):
@@ -30,6 +31,7 @@ class TripUpdate(BaseModel):
     pace: str | None = None
     interests: List[str] | None = None
     travel_style: str | None = None
+    traveler_group: str | None = None
 
 
 class ScheduleItemOut(BaseModel):
@@ -68,6 +70,7 @@ class TripOut(BaseModel):
     pace: str
     interests: List[str]
     travel_style: str = "城市探索"
+    traveler_group: str = "成人"
     traveler_profile: str | None = None
     consumption_level: str | None = None
     budget_min: float | None = None
@@ -100,6 +103,7 @@ class TripOut(BaseModel):
             pace=trip.pace,
             interests=interests,
             travel_style=trip.travel_style or "城市探索",
+            traveler_group=trip.traveler_group or "成人",
             traveler_profile=trip.traveler_profile,
             consumption_level=trip.consumption_level,
             budget_min=trip.budget_min,

@@ -9,7 +9,9 @@ from app.data import (
     city_tiers,
     interests as interest_rules,
     pace as pace_rules,
+    season as season_rules,
     tiers,
+    traveler_constraints,
 )
 
 
@@ -21,6 +23,7 @@ def build_plan(req: Any) -> dict[str, Any]:
     budget = max(float(req.budget or 0), 0)
     user_interests = list(req.interests or [])
     travel_style = str(getattr(req, "travel_style", "") or "城市探索")
+    traveler_group = str(getattr(req, "traveler_group", "") or "成人")
 
     factor = cities.city_factor(destination)
     city_label = cities.city_level(destination)
@@ -56,6 +59,8 @@ def build_plan(req: Any) -> dict[str, Any]:
     profile += tag + "旅行者"
 
     daily_places = pace_rules.daily_places(days)
+    constraints = traveler_constraints.traveler_constraints(traveler_group)
+    season = season_rules.season_factors(req.start_date, req.end_date)
     place_preferences = interest_rules.place_preferences(
         user_interests, travel_style
     )
@@ -86,4 +91,7 @@ def build_plan(req: Any) -> dict[str, Any]:
         },
         "place_preferences": place_preferences,
         "travel_style": travel_style,
+        "traveler_group": traveler_group,
+        "constraints": constraints,
+        "season": season,
     }

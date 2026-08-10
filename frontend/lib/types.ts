@@ -48,6 +48,7 @@ export interface Trip {
   pace: string;
   interests: string[];
   travel_style?: string;
+  traveler_group?: string;
   traveler_profile: string | null;
   consumption_level: string | null;
   budget_min: number | null;
@@ -72,6 +73,7 @@ export interface TripCreate {
   pace: string;
   interests: string[];
   travel_style?: string;
+  traveler_group?: string;
 }
 
 export interface AIGenerateResponse {
