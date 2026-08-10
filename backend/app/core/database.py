@@ -15,7 +15,9 @@ engine = create_engine(
     connect_args=connect_args,
     pool_pre_ping=True,
     # Supabase 事务模式连接池不支持持久连接，用 NullPool 最稳妥
-    poolclass=NullPool if settings.sqlalchemy_database_url.startswith("postgresql") else None,
+    poolclass=NullPool
+    if settings.sqlalchemy_database_url.startswith(("postgresql", "mysql"))
+    else None,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
