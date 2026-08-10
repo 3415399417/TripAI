@@ -1,5 +1,5 @@
 /* TripAI service worker: cache app shell for offline / fast reloads. */
-const CACHE_NAME = "tripai-shell-v3";
+const CACHE_NAME = "tripai-shell-v4";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -25,36 +25,39 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return; // API calls pass through
+  if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    // Navigations: network-first so users always get the newest page.
-    // Static assets: cache-first for speed.
-    if (request.mode === "navigate") {
-      return fetch(request)
-        .then((response) => {
+    (async () => {
+      // Navigations: network-first so users always get the newest page.
+      if (request.mode === "navigate") {
+        try {
+          const response = await fetch(request);
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
-        })
-        .catch(() => caches.match(request).then((cached) => cached ?? caches.match("/")));
-    }
-
-    return caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
-        const copy = response.clone();
-        if (
-          response.ok &&
-          (request.destination === "script" ||
-            request.destination === "style" ||
-            request.destination === "image" ||
-            request.destination === "font")
-        ) {
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        } catch {
+          const cached = await caches.match(request);
+          return cached || caches.match("/");
         }
-        return response;
-      });
-    })
+      }
+
+      // Static assets: cache-first.
+      const cached = await caches.match(request);
+      if (cached) return cached;
+
+      const response = await fetch(request);
+      const copy = response.clone();
+      if (
+        response.ok &&
+        (request.destination === "script" ||
+          request.destination === "style" ||
+          request.destination === "image" ||
+          request.destination === "font")
+      ) {
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+      }
+      return response;
+    })()
   );
 });

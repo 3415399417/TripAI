@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getToken, tripApi } from "@/lib/api";
 import type { Trip } from "@/lib/types";
@@ -36,6 +37,7 @@ const TEMPLATES = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const [recentTrips, setRecentTrips] = useState<Trip[]>([]);
   const [loggedIn, setLoggedIn] = useState(false);
   const [quickDest, setQuickDest] = useState("");
@@ -56,9 +58,11 @@ export default function HomePage() {
 
   function goCreate() {
     const dest = quickDest.trim();
-    window.location.href = dest
-      ? `/trips/new?destination=${encodeURIComponent(dest)}`
-      : "/trips/new";
+    router.push(
+      dest
+        ? `/trips/new?destination=${encodeURIComponent(dest)}`
+        : "/trips/new"
+    );
   }
 
   return (

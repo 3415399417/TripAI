@@ -40,6 +40,7 @@ export default function TripPlannerPage() {
 
   useEffect(() => {
     if (!getToken()) {
+      setLoading(false);
       router.push("/login");
       return;
     }
@@ -52,8 +53,12 @@ export default function TripPlannerPage() {
         }
       })
       .catch((e) => {
-        if (e instanceof ApiError && e.status === 401) router.push("/login");
-        else setError(e instanceof Error ? e.message : "加载失败");
+        if (e instanceof ApiError && e.status === 401) {
+          setLoading(false);
+          router.push("/login");
+          return;
+        }
+        setError(e instanceof Error ? e.message : "加载失败");
       })
       .finally(() => setLoading(false));
   }, [tripId, router]);
@@ -214,7 +219,7 @@ export default function TripPlannerPage() {
   }));
 
   return (
-    <div className="space-y-4 pb-24 lg:pb-0">
+    <div className="space-y-4 lg:pb-0">
       {/* Header */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -390,7 +395,7 @@ export default function TripPlannerPage() {
 
       {/* Mobile edit action bar */}
       {editMode && (
-        <div className="fixed inset-x-0 bottom-14 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur lg:hidden">
+        <div className="fixed inset-x-0 bottom-16 z-40 border-t border-slate-200 bg-white/95 p-3 backdrop-blur lg:hidden">
           <div className="flex gap-2">
             <button
               onClick={save}
