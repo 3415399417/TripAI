@@ -95,12 +95,6 @@ export default function HomePage() {
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/trips/new"
-              className="rounded-xl bg-white px-6 py-3 font-semibold text-teal-700 shadow-lg transition hover:bg-teal-50"
-            >
-              ✨ 开始创建旅行
-            </Link>
-            <Link
               href="#templates"
               className="rounded-xl border border-white/40 px-6 py-3 font-semibold text-white transition hover:bg-white/10"
             >

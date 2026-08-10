@@ -9,13 +9,8 @@ import type { User } from "@/lib/types";
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     if (!getToken()) {
@@ -93,50 +88,8 @@ export default function Navbar() {
               </Link>
             </>
           )}
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 sm:hidden"
-            aria-label="菜单"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </button>
         </div>
       </div>
-
-      {menuOpen && (
-        <nav className="border-t border-slate-100 bg-white px-4 py-2 sm:hidden">
-          <Link
-            href="/"
-            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${pathname === "/" ? "bg-teal-50 text-teal-700" : "text-slate-600"}`}
-          >
-            首页
-          </Link>
-          <Link
-            href="/my-trips"
-            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${pathname === "/my-trips" ? "bg-teal-50 text-teal-700" : "text-slate-600"}`}
-          >
-            我的旅行
-          </Link>
-          <Link
-            href="/trips/new"
-            className={`block rounded-lg px-3 py-2.5 text-sm font-medium ${pathname === "/trips/new" ? "bg-teal-50 text-teal-700" : "text-slate-600"}`}
-          >
-            创建旅行
-          </Link>
-        </nav>
-      )}
 
       {/* 移动端底部导航 */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-safe backdrop-blur sm:hidden">
