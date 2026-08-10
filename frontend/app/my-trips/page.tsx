@@ -75,29 +75,47 @@ export default function MyTripsPage() {
           {trips.map((t) => (
             <div
               key={t.id}
-              className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+              className="group card overflow-hidden transition hover:shadow-md"
             >
               <Link href={`/trips/${t.id}`}>
-                <h3 className="font-bold text-slate-900 group-hover:text-teal-700">
-                  {t.title}
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  {t.destination} · {t.start_date.slice(0, 10)} ~{" "}
-                  {t.end_date.slice(0, 10)}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="rounded-full bg-teal-50 px-3 py-1 font-medium text-teal-700">
-                    {t.schedules.length} 个地点
-                  </span>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-500">
-                    {t.travelers} 人
-                  </span>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-500">
-                    ¥{t.budget}
-                  </span>
+                <div className="flex h-20 items-start justify-between bg-gradient-to-br from-teal-500 via-emerald-500 to-cyan-600 px-4 py-3">
+                  <div>
+                    <span className="text-lg font-bold text-white">
+                      {t.destination}
+                    </span>
+                    <p className="mt-0.5 text-xs text-white/80">
+                      {t.start_date.slice(0, 10)} ~ {t.end_date.slice(0, 10)}
+                    </p>
+                  </div>
+                  {t.consumption_level && (
+                    <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold text-white">
+                      {t.consumption_level}
+                    </span>
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3 className="font-bold text-slate-900 group-hover:text-teal-700">
+                    {t.title}
+                  </h3>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className="rounded-full bg-teal-50 px-2.5 py-1 font-medium text-teal-700">
+                      {t.schedules.length} 个地点
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-500">
+                      {t.travelers} 人
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-500">
+                      ¥{t.budget.toLocaleString()}
+                    </span>
+                    {t.travel_style && (
+                      <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">
+                        {t.travel_style}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </Link>
-              <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3">
+              <div className="mx-4 mb-4 flex gap-2 border-t border-slate-100 pt-3">
                 <Link
                   href={`/trips/${t.id}`}
                   className="flex-1 rounded-lg border border-slate-200 py-1.5 text-center text-sm font-medium text-slate-600 hover:bg-slate-50"
@@ -124,4 +142,3 @@ export default function MyTripsPage() {
     </div>
   );
 }
-

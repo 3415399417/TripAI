@@ -94,12 +94,30 @@ export default function TripForm({
   }
 
   const today = new Date().toISOString().slice(0, 10);
+  const days =
+    startDate && endDate && endDate >= startDate
+      ? Math.max(
+          1,
+          Math.round(
+            (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+              86400000
+          ) + 1
+        )
+      : 1;
+  const perPersonPerDay =
+    budget > 0 && travelers > 0 ? Math.round(budget / travelers / days) : 0;
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+      className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
     >
+      <div className="section-title">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-base">
+          📍
+        </span>
+        行程信息与预算
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="目的地" full>
           <input
@@ -142,17 +160,53 @@ export default function TripForm({
         </Field>
 
         <Field label="总预算（元）" full>
-          <input
-            type="number"
-            min={0}
-            step={100}
-            value={budget}
-            onChange={(e) => setBudget(Number(e.target.value))}
-            className="input"
-          />
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={1000}
+              max={100000}
+              step={500}
+              value={budget}
+              onChange={(e) => setBudget(Number(e.target.value))}
+              className="flex-1"
+            />
+            <span className="w-24 shrink-0 rounded-xl border border-teal-200 bg-teal-50 px-2 py-2 text-center text-sm font-bold text-teal-700">
+              ¥{budget.toLocaleString()}
+            </span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {[3000, 8000, 15000, 30000, 50000].map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setBudget(v)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                  budget === v
+                    ? "bg-teal-600 text-white"
+                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                }`}
+              >
+                ¥{v.toLocaleString()}
+              </button>
+            ))}
+          </div>
+          {perPersonPerDay > 0 && (
+            <p className="mt-2 text-xs text-slate-400">
+              人均日预算约 ¥{perPersonPerDay}/天
+              <span className="ml-1 text-slate-300">
+                （{travelers}人 × {days}天，城市消费水平会影响实际档位）
+              </span>
+            </p>
+          )}
         </Field>
       </div>
 
+      <div className="section-title">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-base">
+          🎯
+        </span>
+        偏好与人群
+      </div>
       <Field label="旅行节奏">
         <div className="flex gap-2">
           {PACE_OPTIONS.map((p) => (

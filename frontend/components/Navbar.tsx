@@ -137,6 +137,45 @@ export default function Navbar() {
           </Link>
         </nav>
       )}
+
+      {/* 移动端底部导航 */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-safe backdrop-blur sm:hidden">
+        <div className="grid grid-cols-3">
+          <Link
+            href="/"
+            className={`flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium ${
+              pathname === "/" ? "text-teal-600" : "text-slate-500"
+            }`}
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75" />
+            </svg>
+            首页
+          </Link>
+          <Link
+            href="/trips/new"
+            className={`flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium ${
+              pathname === "/trips/new" ? "text-teal-600" : "text-slate-500"
+            }`}
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            创建
+          </Link>
+          <Link
+            href="/my-trips"
+            className={`flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium ${
+              pathname === "/my-trips" ? "text-teal-600" : "text-slate-500"
+            }`}
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+            我的
+          </Link>
+        </div>
+      </nav>
     </header>
   );
 }

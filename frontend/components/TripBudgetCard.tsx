@@ -34,7 +34,7 @@ export default function TripBudgetCard({ trip }: { trip: Trip }) {
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-base font-bold text-slate-900">
-          {trip.traveler_profile || "AI 旅行画像"}
+          💰 {trip.traveler_profile || "AI 旅行画像"}
         </h2>
         <span
           className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${

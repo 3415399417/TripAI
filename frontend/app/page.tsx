@@ -38,6 +38,7 @@ const TEMPLATES = [
 export default function HomePage() {
   const [recentTrips, setRecentTrips] = useState<Trip[]>([]);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [quickDest, setQuickDest] = useState("");
 
   useEffect(() => {
     if (!getToken()) return;
@@ -53,6 +54,13 @@ export default function HomePage() {
       t.tags.join(",")
     )}`;
 
+  function goCreate() {
+    const dest = quickDest.trim();
+    window.location.href = dest
+      ? `/trips/new?destination=${encodeURIComponent(dest)}`
+      : "/trips/new";
+  }
+
   return (
     <div className="space-y-12">
       {/* Hero */}
@@ -67,6 +75,24 @@ export default function HomePage() {
           <p className="mt-4 text-lg text-teal-50/90">
             输入需求 → AI 生成行程 → 地图查看路线 → 编辑保存 → 分享给朋友
           </p>
+          <div className="mt-8 flex max-w-xl flex-col gap-3 sm:flex-row">
+            <div className="flex flex-1 items-center gap-2 rounded-xl bg-white/95 px-3.5 py-2.5 shadow-lg">
+              <span className="text-base">📍</span>
+              <input
+                value={quickDest}
+                onChange={(e) => setQuickDest(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && goCreate()}
+                placeholder="想去哪？比如：上海、成都、大理"
+                className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={goCreate}
+              className="rounded-xl bg-white px-6 py-2.5 font-semibold text-teal-700 shadow-lg transition hover:bg-teal-50"
+            >
+              开始规划
+            </button>
+          </div>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/trips/new"
@@ -170,4 +196,3 @@ export default function HomePage() {
     </div>
   );
 }
-
