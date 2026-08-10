@@ -1,5 +1,5 @@
 /* TripAI service worker: cache app shell for offline / fast reloads. */
-const CACHE_NAME = "tripai-shell-v1";
+const CACHE_NAME = "tripai-shell-v2";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
