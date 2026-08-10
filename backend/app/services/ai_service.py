@@ -166,6 +166,12 @@ def generate_itinerary(req: TripCreate, feedback: str | None = None) -> AIGenera
             "\n地点类型偏好（生成地点时请优先安排这些类型）：\n- "
             + "\n- ".join(place_prefs)
         )
+    signature = plan.get("signature_places") or []
+    if signature:
+        user_content += (
+            "\n必去标志性地点（与你的偏好匹配，行程中必须包含这些真实地点）：\n- "
+            + "\n- ".join(signature)
+        )
     constraints = plan.get("constraints") or {}
     if constraints.get("notes"):
         user_content += f"\n旅行约束（必须遵守）：{constraints['notes']}"

@@ -8,6 +8,7 @@ from app.data import (
     cities,
     city_tiers,
     interests as interest_rules,
+    landmarks,
     pace as pace_rules,
     season as season_rules,
     tiers,
@@ -61,6 +62,9 @@ def build_plan(req: Any) -> dict[str, Any]:
     daily_places = pace_rules.daily_places(days)
     constraints = traveler_constraints.traveler_constraints(traveler_group)
     season = season_rules.season_factors(req.start_date, req.end_date)
+    signature = landmarks.signature_places(
+        destination, user_interests, travel_style
+    )
     place_preferences = interest_rules.place_preferences(
         user_interests, travel_style
     )
@@ -94,4 +98,5 @@ def build_plan(req: Any) -> dict[str, Any]:
         "traveler_group": traveler_group,
         "constraints": constraints,
         "season": season,
+        "signature_places": signature,
     }
