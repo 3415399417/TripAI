@@ -80,6 +80,10 @@ class TripOut(BaseModel):
     city_level: str | None = None
     city_factor: float | None = None
     daily_budget: float | None = None
+    weather: str | None = None
+    score_total: int | None = None
+    score_detail: dict = Field(default_factory=dict)
+    llm_seconds: float | None = None
     status: str
     created_at: datetime
     updated_at: datetime
@@ -97,6 +101,10 @@ class TripOut(BaseModel):
             alternatives = json.loads(trip.alternatives or "[]")
         except (ValueError, TypeError):
             alternatives = []
+        try:
+            score_detail = json.loads(trip.score_detail or "{}")
+        except (ValueError, TypeError):
+            score_detail = {}
         return cls(
             id=trip.id,
             title=trip.title,
@@ -118,6 +126,10 @@ class TripOut(BaseModel):
             city_level=trip.city_level,
             city_factor=trip.city_factor,
             daily_budget=trip.daily_budget,
+            weather=trip.weather,
+            score_total=trip.score_total,
+            score_detail=score_detail if isinstance(score_detail, dict) else {},
+            llm_seconds=trip.llm_seconds,
             status=trip.status,
             created_at=trip.created_at,
             updated_at=trip.updated_at,

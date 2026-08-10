@@ -8,6 +8,7 @@ import MapView from "@/components/MapView";
 import PlaceCard from "@/components/PlaceCard";
 import TripBudgetCard from "@/components/TripBudgetCard";
 import TripAlternativesCard from "@/components/TripAlternativesCard";
+import TripGenerationCard from "@/components/TripGenerationCard";
 import { ApiError, getToken, tripApi } from "@/lib/api";
 import type { Place, ScheduleItem, Trip } from "@/lib/types";
 
@@ -288,6 +289,9 @@ export default function TripPlannerPage() {
 
       {/* AI alternatives */}
       <TripAlternativesCard trip={trip} />
+
+      {/* AI generation report */}
+      <TripGenerationCard trip={trip} />
 
       {/* Mobile: segmented tabs */}
       <div className="sticky top-16 z-30 -mx-4 border-b border-slate-200 bg-white/95 px-4 py-2 backdrop-blur lg:hidden">

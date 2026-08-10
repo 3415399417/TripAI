@@ -43,6 +43,44 @@ def get_trip(
     return TripOut.from_trip(_get_owned_trip(db, trip_id, user))
 
 
+@router.get("/{trip_id}/generation-log")
+def get_generation_log(
+    trip_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Return the full generation log for a trip (for debugging/training)."""
+    _get_owned_trip(db, trip_id, user)
+    from app.models.generation_log import GenerationLog
+
+    log = (
+        db.query(GenerationLog)
+        .filter(GenerationLog.trip_id == trip_id)
+        .order_by(GenerationLog.id.desc())
+        .first()
+    )
+    if log is None:
+        return {"detail": "暂无生成日志"}
+
+    def _load(value: str | None) -> object | None:
+        if not value:
+            return None
+        try:
+            return json.loads(value)
+        except (ValueError, TypeError):
+            return value
+
+    return {
+        "id": log.id,
+        "payload": _load(log.payload),
+        "plan": _load(log.plan),
+        "prompt": log.prompt,
+        "ai_output": _load(log.ai_output),
+        "final_result": _load(log.final_result),
+        "created_at": str(log.created_at),
+    }
+
+
 @router.get("/{trip_id}/public", response_model=TripOut)
 def get_public_trip(trip_id: int, db: Session = Depends(get_db)) -> TripOut:
     trip = db.get(Trip, trip_id)

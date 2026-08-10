@@ -36,6 +36,10 @@ class Trip(Base):
     city_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
     city_factor: Mapped[float | None] = mapped_column(Float, nullable=True)
     daily_budget: Mapped[float | None] = mapped_column(Float, nullable=True)
+    weather: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    score_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    score_detail: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    llm_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="draft")  # draft|generated
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

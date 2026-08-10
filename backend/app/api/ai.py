@@ -280,6 +280,18 @@ def generate_trip(
     trip.city_level = plan["city_level"]
     trip.city_factor = plan["city_factor"]
     trip.daily_budget = plan["daily_budget"]
+    from app.services.weather_service import get_weather
+
+    weather_info = get_weather(payload.destination, payload.start_date)
+    trip.weather = (
+        f"{weather_info['weather']} {weather_info['temperature']}°C"
+        if weather_info
+        else None
+    )
+    score_final = _score_plan(result, payload)
+    trip.score_total = score_final["total"]
+    trip.score_detail = json.dumps(score_final, ensure_ascii=False)
+    trip.llm_seconds = round(llm_seconds, 1)
 
     trip.status = "generated"
     db.commit()

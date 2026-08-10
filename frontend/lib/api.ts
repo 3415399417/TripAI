@@ -101,6 +101,8 @@ export const tripApi = {
   list: () => apiFetch<Trip[]>("/api/trips"),
   get: (id: number) => apiFetch<Trip>(`/api/trips/${id}`),
   getPublic: (id: number) => apiFetch<Trip>(`/api/trips/${id}/public`),
+  getGenerationLog: (id: number) =>
+    apiFetch<Record<string, unknown>>(`/api/trips/${id}/generation-log`),
   generate: (payload: TripCreate) =>
     apiFetch<AIGenerateResponse>("/api/ai/generate-trip", {
       method: "POST",

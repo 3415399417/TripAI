@@ -58,6 +58,16 @@ export interface Trip {
   city_level: string | null;
   city_factor: number | null;
   daily_budget: number | null;
+  weather: string | null;
+  score_total: number | null;
+  score_detail: {
+    total?: number;
+    budget_match?: number;
+    interest_match?: number;
+    route_reason?: number;
+    quality_match?: number;
+  };
+  llm_seconds: number | null;
   status: string;
   created_at: string;
   updated_at: string;
