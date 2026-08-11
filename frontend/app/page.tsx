@@ -66,22 +66,30 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       {/* Hero */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-600 via-emerald-600 to-cyan-600 px-6 py-16 text-white sm:px-12">
-        <div className="pointer-events-none absolute -right-20 -top-20 text-[16rem] opacity-15">
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-600 via-emerald-600 to-cyan-600 px-5 py-8 text-white sm:rounded-3xl sm:px-10 sm:py-12">
+        <div className="pointer-events-none absolute -right-8 -top-8 text-[7rem] opacity-10 sm:text-[11rem]">
           ✈
         </div>
         <div className="relative max-w-2xl">
-          <h1 className="text-3xl font-extrabold leading-tight sm:text-5xl">
+          <h1 className="text-2xl font-extrabold leading-snug sm:text-4xl md:text-5xl">
             10 分钟，让 AI 帮你规划好一场旅行
           </h1>
-          <p className="mt-4 text-lg text-teal-50/90">
-            输入需求 → AI 生成行程 → 地图查看路线 → 编辑保存 → 分享给朋友
-          </p>
-          <div className="mt-8 flex max-w-xl flex-col gap-3 sm:flex-row">
-            <div className="flex flex-1 items-center gap-2 rounded-xl bg-white/95 px-3.5 py-2.5 shadow-lg">
-              <span className="text-base">📍</span>
+          <div className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-teal-50/85 sm:text-base">
+            <span>输入需求</span>
+            <span className="text-teal-200">→</span>
+            <span>AI 生成行程</span>
+            <span className="text-teal-200">→</span>
+            <span>地图查看路线</span>
+            <span className="text-teal-200 hidden sm:inline">→</span>
+            <span className="hidden sm:inline">编辑保存</span>
+            <span className="text-teal-200 hidden sm:inline">→</span>
+            <span className="hidden sm:inline">分享给朋友</span>
+          </div>
+          <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <div className="flex flex-1 items-center gap-2 rounded-xl bg-white/95 px-3.5 py-3 shadow-md">
+              <span className="shrink-0 text-base">📍</span>
               <input
                 value={quickDest}
                 onChange={(e) => setQuickDest(e.target.value)}
@@ -90,33 +98,33 @@ export default function HomePage() {
                 className="w-full bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none"
               />
             </div>
-            <button
-              onClick={goCreate}
-              className="rounded-xl bg-white px-6 py-2.5 font-semibold text-teal-700 shadow-lg transition hover:bg-teal-50"
-            >
-              开始规划
-            </button>
-          </div>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="#templates"
-              className="rounded-xl border border-white/40 px-6 py-3 font-semibold text-white transition hover:bg-white/10"
-            >
-              看看推荐模板
-            </Link>
+            <div className="flex gap-2">
+              <button
+                onClick={goCreate}
+                className="whitespace-nowrap rounded-xl bg-white px-5 py-3 text-sm font-semibold text-teal-700 shadow-md transition hover:bg-teal-50 active:scale-[0.98]"
+              >
+                ✨ 开始规划
+              </button>
+              <Link
+                href="#templates"
+                className="whitespace-nowrap rounded-xl border border-white/35 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                推荐模板
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Features */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {FEATURES.map((f) => (
           <div
             key={f.title}
             className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
           >
-            <span className="text-3xl">{f.icon}</span>
-            <h3 className="mt-3 font-bold text-slate-900">{f.title}</h3>
+            <span className="text-2xl">{f.icon}</span>
+            <h3 className="mt-2 font-bold text-slate-900">{f.title}</h3>
             <p className="mt-1 text-sm leading-relaxed text-slate-500">{f.desc}</p>
           </div>
         ))}
@@ -128,17 +136,17 @@ export default function HomePage() {
         <p className="mt-1 text-sm text-slate-500">
           一键带入目的地和兴趣偏好，快速开始。
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {TEMPLATES.map((t) => (
             <Link
               key={t.city}
               href={templateHref(t)}
               className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
-              <span className="text-4xl">{t.emoji}</span>
-              <h3 className="mt-3 text-lg font-bold text-slate-900">{t.city}</h3>
+              <span className="text-3xl">{t.emoji}</span>
+              <h3 className="mt-2 text-lg font-bold text-slate-900">{t.city}</h3>
               <p className="text-sm text-slate-500">{t.days} 天经典路线</p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="mt-2 flex flex-wrap gap-1.5">
                 {t.tags.map((tag) => (
                   <span
                     key={tag}
@@ -171,7 +179,7 @@ export default function HomePage() {
               吧
             </p>
           ) : (
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {recentTrips.map((t) => (
                 <Link
                   key={t.id}

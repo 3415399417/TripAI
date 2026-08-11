@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const AMAP_JS_KEY = process.env.NEXT_PUBLIC_AMAP_JS_KEY ?? "";
+const TILE_TIMEOUT_MS = 10_000; // 10s 内瓦片未加载完认为失败
 
 export interface MapPlace {
   id: number;
@@ -22,7 +23,7 @@ interface MapViewProps {
   className?: string;
 }
 
-type MapStatus = "loading" | "ready" | "missing-key" | "error";
+type MapStatus = "loading" | "ready" | "missing-key" | "tiles-failed" | "error";
 
 export default function MapView({
   places,
@@ -37,6 +38,7 @@ export default function MapView({
   const markersRef = useRef<any[]>([]);
   const polylineRef = useRef<any>(null);
   const lastFitKey = useRef<string>("");
+  const tileTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [status, setStatus] = useState<MapStatus>(
     AMAP_JS_KEY ? "loading" : "missing-key"
   );
@@ -59,13 +61,40 @@ export default function MapView({
         zoom: 11,
         resizeEnable: true,
       });
-      setStatus("ready");
+
+      // Detect tile load success/failure
+      let completeFired = false;
+      if (typeof mapRef.current.on === "function") {
+        mapRef.current.on("complete", () => {
+          completeFired = true;
+          if (tileTimer.current) {
+            clearTimeout(tileTimer.current);
+            tileTimer.current = null;
+          }
+          if (!disposed) setStatus("ready");
+        });
+      }
+
+      // Fallback: if tiles haven't arrived within timeout, flag as tiles-failed
+      tileTimer.current = setTimeout(() => {
+        if (!completeFired && !disposed) {
+          setStatus("tiles-failed");
+        }
+      }, TILE_TIMEOUT_MS);
+
+      if (!completeFired) {
+        setStatus("ready"); // markers work immediately, tiles may still be loading
+      }
     })().catch(() => {
       if (!disposed) setStatus("error");
     });
 
     return () => {
       disposed = true;
+      if (tileTimer.current) {
+        clearTimeout(tileTimer.current);
+        tileTimer.current = null;
+      }
       mapRef.current?.destroy();
       mapRef.current = null;
     };
@@ -74,7 +103,7 @@ export default function MapView({
   // Render markers / polyline whenever places or selection change
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready") return;
+    if (!map || (status !== "ready" && status !== "tiles-failed")) return;
 
     markersRef.current.forEach((m) => map.remove(m));
     markersRef.current = [];
@@ -125,7 +154,7 @@ export default function MapView({
   // Zoom to a specific place when requested from the detail view
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || status !== "ready") return;
+    if (!map || (status !== "ready" && status !== "tiles-failed")) return;
     if (focusId == null) return;
     const target = places.find((p) => p.id === focusId);
     if (!target) return;
@@ -173,13 +202,22 @@ export default function MapView({
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={`rounded-2xl overflow-hidden bg-slate-100 ${className}`}
-    >
-      {status === "loading" && (
-        <div className="flex h-full items-center justify-center text-sm text-slate-400">
-          地图加载中…
+    <div className="relative">
+      <div
+        ref={containerRef}
+        className={`rounded-2xl overflow-hidden bg-slate-100 ${className}`}
+      >
+        {status === "loading" && (
+          <div className="flex h-full items-center justify-center text-sm text-slate-400">
+            地图加载中…
+          </div>
+        )}
+      </div>
+
+      {/* Tile load failure warning */}
+      {status === "tiles-failed" && (
+        <div className="absolute inset-x-0 top-2 mx-auto w-fit rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 shadow-sm">
+          ⚠️ 地图瓦片加载失败，请尝试切换网络或刷新页面
         </div>
       )}
     </div>
