@@ -191,7 +191,7 @@ def list_expenses(
     items = (
         db.query(TripExpense)
         .filter(TripExpense.trip_id == trip.id)
-        .order_by(TripExpense.day.asc().nullsfirst(), TripExpense.id.desc())
+        .order_by(TripExpense.day.asc(), TripExpense.id.desc())
         .all()
     )
     spent = round(sum(item.amount for item in items), 2)

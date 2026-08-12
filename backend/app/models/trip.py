@@ -57,7 +57,8 @@ class Trip(Base):
     expenses: Mapped[list[TripExpense]] = relationship(
         back_populates="trip",
         cascade="all, delete-orphan",
-        order_by="TripExpense.day.asc().nullsfirst(), TripExpense.id.desc()",
+        # MySQL 不支持 NULLS FIRST；ASC 下 NULL 默认排最前，直接省略即可
+        order_by="TripExpense.day.asc(), TripExpense.id.desc()",
     )
 
 
