@@ -191,6 +191,10 @@ def _run_generation(
     db.commit()
     db.refresh(trip)
 
+    from app.services import preference_service
+
+    prefs_summary = preference_service.build_summary(db, user.id)
+
     if on_stage:
         on_stage("budget", "正在分析目的地消费水平与预算等级…")
 
@@ -206,7 +210,9 @@ def _run_generation(
         db.flush()
 
         t_start = time.time()
-        new_result = ai_service.generate_itinerary(payload, feedback=feedback)
+        new_result = ai_service.generate_itinerary(
+            payload, feedback=feedback, prefs_summary=prefs_summary
+        )
         llm_seconds += time.time() - t_start
 
         t_start = time.time()
@@ -219,7 +225,9 @@ def _run_generation(
         if on_stage:
             on_stage("llm", "AI 正在规划每日行程，约需 30-60 秒，请稍候…")
         t_llm = time.time()
-        result = ai_service.generate_itinerary(payload)
+        result = ai_service.generate_itinerary(
+            payload, prefs_summary=prefs_summary
+        )
         llm_seconds += time.time() - t_llm
         t_save = time.time()
         total, fallback, filtered = ai_service.save_itinerary(
@@ -335,6 +343,10 @@ def _run_generation(
             ),
         )
     )
+    db.commit()
+
+    # 学习用户偏好：兴趣/类型/人群/节奏/消费档位/常去地点
+    preference_service.record_generation(db, user.id, payload, result)
     db.commit()
 
     if on_stage:

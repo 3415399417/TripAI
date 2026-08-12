@@ -13,6 +13,8 @@
 - 预算方案：消费画像、建议消费区间、预算分配、日均预算（预算代表消费能力，不必花完）
 - 备选推荐：预算不足/天气不好/想升级时的替换方案
 - 推荐理由：结合人群、天气、兴趣的口语化表达
+- 用户偏好记忆：从历史生成/编辑中学习兴趣、节奏、常去与不喜好的地点，
+  下次生成自动参考（可在创建页关闭、在个人中心查看与清除）
 
 **行程管理**
 - 每日行程卡片可折叠，默认展开第一天
@@ -51,13 +53,14 @@ TripAI/
 │   ├── app/
 │   │   ├── core/                # 配置、数据库、安全（JWT/bcrypt）、轻量迁移
 │   │   ├── models/              # User / Trip / Schedule / Place / Photo /
-│   │   │                        # PromptVersion / GenerationLog / TripExpense
+│   │   │                        # UserPreference / PromptVersion / GenerationLog / TripExpense
 │   │   ├── schemas/             # Pydantic 请求/响应模型
 │   │   ├── api/                 # 路由：auth / trips / ai / places
 │   │   ├── data/                # 专家知识库：城市系数 / 消费等级 / 兴趣权重 /
 │   │   │                        # 节奏 / 季节 / 人群约束 / 标志性地点
 │   │   └── services/
 │   │       ├── ai_service/      # LLM 生成（generator/prompt/client/budget/optimizer/saver/mock）
+│   │       ├── preference_service.py  # 用户偏好记忆：学习/摘要/清除
 │   │       ├── amap_service.py  # 高德 POI 搜索 + 详情（本地缓存）
 │   │       └── weather_service.py  # 高德天气：实时 + 按天预报（30 分钟缓存）
 │   ├── scripts/seed.py          # 演示账号 + 演示行程
@@ -223,6 +226,8 @@ s deploy -y
 | POST | /api/auth/register | 注册（返回 JWT） |
 | POST | /api/auth/login | 登录 |
 | GET | /api/auth/me | 当前用户 |
+| GET | /api/auth/me/stats | 个人统计（行程数/预算/花费） |
+| GET/PUT/DELETE | /api/auth/me/preferences | 偏好记忆查看/编辑/清除 |
 | GET | /api/trips | 我的旅行列表 |
 | GET | /api/trips/{id} | 旅行详情（含行程） |
 | PUT | /api/trips/{id}/schedule | 保存编辑后的行程 |
@@ -249,7 +254,7 @@ s deploy -y
 
 ## 迭代路线
 
-- **V1.0**（当前）：AI 规划 + 地图 + 天气 + 记账 + 分享卡片 + 一键导航
-- **V1.5**：用户偏好记忆（越用越懂你）、行程导出（日历/PDF）
+- **V1.0**（当前）：AI 规划 + 地图 + 天气 + 记账 + 分享卡片 + 一键导航 + 用户偏好记忆
+- **V1.5**：行程导出（日历/PDF）
 - **V2.0**：多方案对比、照片游记（Photo 表已预留）
 - **V3.0**：多人协作、AI 实时旅行助手

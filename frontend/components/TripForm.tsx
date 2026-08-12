@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { tripApi } from "@/lib/api";
+import { authApi, getToken, tripApi } from "@/lib/api";
 import type { TripCreate } from "@/lib/types";
 
 const INTEREST_OPTIONS = [
@@ -61,6 +61,7 @@ export default function TripForm({
   const [interests, setInterests] = useState<string[]>(initialInterests);
   const [travelStyle, setTravelStyle] = useState("城市探索");
   const [travelerGroup, setTravelerGroup] = useState("成人");
+  const [usePrefs, setUsePrefs] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState("");
@@ -73,6 +74,29 @@ export default function TripForm({
     const timer = setInterval(() => setElapsed((s) => s + 1), 1000);
     return () => clearInterval(timer);
   }, [loading]);
+
+  // 历史偏好预填（可关闭）
+  useEffect(() => {
+    if (!getToken() || !usePrefs) return;
+    let cancelled = false;
+    authApi
+      .getPreferences()
+      .then((p) => {
+        if (cancelled || p.generation_count === 0) return;
+        setInterests((prev) => (prev.length ? prev : p.interests.slice(0, 3)));
+        setTravelStyle((prev) =>
+          prev === "城市探索" && p.travel_styles[0] ? p.travel_styles[0] : prev
+        );
+        setTravelerGroup((prev) =>
+          prev === "成人" && p.traveler_groups[0] ? p.traveler_groups[0] : prev
+        );
+        setPace((prev) => (prev === "适中" && p.paces[0] ? p.paces[0] : prev));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [usePrefs]);
 
   function toggleInterest(tag: string) {
     setInterests((prev) =>
@@ -228,6 +252,20 @@ export default function TripForm({
           🎯
         </span>
         偏好与人群
+      </div>
+      <div className="space-y-1">
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={usePrefs}
+            onChange={(e) => setUsePrefs(e.target.checked)}
+            className="h-4 w-4 accent-teal-600"
+          />
+          ✨ 使用我的历史偏好
+        </label>
+        <p className="text-xs text-slate-400">
+          自动参考你之前的兴趣、节奏、人群和常去地点（可随时关闭）
+        </p>
       </div>
       <Field label="旅行节奏">
         <div className="flex gap-2">

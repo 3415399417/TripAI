@@ -16,6 +16,7 @@ from app.schemas.user import (
     UserStatsOut,
     UserUpdate,
 )
+from app.schemas.preference import UserPreferenceOut, UserPreferenceUpdate
 from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -93,3 +94,42 @@ def update_me(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.get("/me/preferences", response_model=UserPreferenceOut)
+def get_preferences(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserPreferenceOut:
+    from app.services import preference_service
+
+    return preference_service.to_out(db, current_user.id)
+
+
+@router.put("/me/preferences", response_model=UserPreferenceOut)
+def update_preferences(
+    payload: UserPreferenceUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserPreferenceOut:
+    from app.services import preference_service
+
+    result = preference_service.update_lists(
+        db,
+        current_user.id,
+        payload.favorite_places,
+        payload.avoid_places,
+    )
+    db.commit()
+    return result
+
+
+@router.delete("/me/preferences", status_code=204)
+def clear_preferences(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    from app.services import preference_service
+
+    preference_service.clear(db, current_user.id)
+    db.commit()

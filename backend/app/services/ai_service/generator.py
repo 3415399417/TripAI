@@ -14,7 +14,11 @@ from app.schemas.trip import TripCreate
 settings = get_settings()
 
 
-def generate_itinerary(req: TripCreate, feedback: str | None = None) -> AIGenerateResult:
+def generate_itinerary(
+    req: TripCreate,
+    feedback: str | None = None,
+    prefs_summary: str | None = None,
+) -> AIGenerateResult:
     """Generate a validated itinerary. Falls back to a mock when no key."""
     from app.services.ai_service.prompt import (
         SYSTEM_PROMPT,
@@ -72,6 +76,10 @@ def generate_itinerary(req: TripCreate, feedback: str | None = None) -> AIGenera
     if feedback:
         user_content += (
             "\n\n上一轮生成的行程存在问题，请严格修正后再输出：\n" + feedback
+        )
+    if prefs_summary:
+        user_content += (
+            f"\n\n用户历史偏好（仅供参考，如有冲突以本次需求为准）：{prefs_summary}"
         )
     prompt_mod.last_prompt = user_content  # set the global
 

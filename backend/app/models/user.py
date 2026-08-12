@@ -23,4 +23,8 @@ class User(Base):
     trips: Mapped[list[Trip]] = relationship(
         back_populates="owner", cascade="all, delete-orphan"
     )
-
+    preference: Mapped["UserPreference | None"] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )

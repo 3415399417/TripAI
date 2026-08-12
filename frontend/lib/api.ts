@@ -10,6 +10,7 @@ import type {
   TripExpenseSummary,
   TripWeather,
   User,
+  UserPreferences,
   UserStats,
 } from "@/lib/types";
 
@@ -183,6 +184,17 @@ export const authApi = {
       method: "PUT",
       body: JSON.stringify({ nickname }),
     }),
+  getPreferences: () => apiFetch<UserPreferences>("/api/auth/me/preferences"),
+  updatePreferences: (payload: {
+    favorite_places?: string[];
+    avoid_places?: string[];
+  }) =>
+    apiFetch<UserPreferences>("/api/auth/me/preferences", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  clearPreferences: () =>
+    apiFetch<null>("/api/auth/me/preferences", { method: "DELETE" }),
 };
 
 export const tripApi = {

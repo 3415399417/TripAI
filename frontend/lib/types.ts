@@ -20,6 +20,18 @@ export interface UserStats {
   member_days: number;
 }
 
+export interface UserPreferences {
+  interests: string[];
+  travel_styles: string[];
+  traveler_groups: string[];
+  paces: string[];
+  budget_tier: string | null;
+  favorite_places: string[];
+  avoid_places: string[];
+  generation_count: number;
+  summary: string;
+}
+
 export interface Place {
   id: number;
   amap_id: string | null;

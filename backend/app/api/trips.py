@@ -149,6 +149,7 @@ def replace_schedule(
     db: Session = Depends(get_db),
 ) -> TripOut:
     trip = _get_owned_trip(db, trip_id, user)
+    old_names = {s.place.name for s in trip.schedules}
     db.query(Schedule).filter(Schedule.trip_id == trip.id).delete()
     for item in items:
         db.add(
@@ -167,6 +168,21 @@ def replace_schedule(
     trip.status = "edited"
     db.commit()
     db.refresh(trip)
+
+    # 学习用户主动删除的地点（练手版：记为“不喜欢/删过”）
+    new_ids = [item.place_id for item in items]
+    new_names: set[str] = set()
+    if new_ids:
+        from app.models.place import Place
+
+        rows = db.query(Place).filter(Place.id.in_(new_ids)).all()
+        new_names = {place.name for place in rows}
+    removed = sorted(old_names - new_names)
+    if removed:
+        from app.services import preference_service
+
+        preference_service.record_removals(db, trip.user_id, removed)
+        db.commit()
     return TripOut.from_trip(trip)
 
 

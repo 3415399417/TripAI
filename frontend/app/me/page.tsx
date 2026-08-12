@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ApiError, authApi, clearToken, getToken } from "@/lib/api";
-import type { User, UserStats } from "@/lib/types";
+import type { User, UserPreferences, UserStats } from "@/lib/types";
 
 export default function MePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [prefs, setPrefs] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
@@ -21,11 +22,12 @@ export default function MePage() {
       router.push("/login");
       return;
     }
-    Promise.all([authApi.me(), authApi.meStats()])
-      .then(([u, s]) => {
+    Promise.all([authApi.me(), authApi.meStats(), authApi.getPreferences()])
+      .then(([u, s, p]) => {
         setUser(u);
         setNickname(u.nickname);
         setStats(s);
+        setPrefs(p);
       })
       .catch((e) => {
         if (e instanceof ApiError && e.status === 401) {
@@ -56,6 +58,37 @@ export default function MePage() {
   function logout() {
     clearToken();
     router.push("/login");
+  }
+
+  async function removePref(name: string, kind: "favorite" | "avoid") {
+    if (!prefs) return;
+    const favorites =
+      kind === "favorite"
+        ? prefs.favorite_places.filter((n) => n !== name)
+        : prefs.favorite_places;
+    const avoids =
+      kind === "avoid"
+        ? prefs.avoid_places.filter((n) => n !== name)
+        : prefs.avoid_places;
+    try {
+      const updated = await authApi.updatePreferences({
+        favorite_places: favorites,
+        avoid_places: avoids,
+      });
+      setPrefs(updated);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "更新失败");
+    }
+  }
+
+  async function clearPrefs() {
+    if (!confirm("确定清除全部偏好记忆吗？下次生成将不再参考历史偏好。")) return;
+    try {
+      await authApi.clearPreferences();
+      setPrefs(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "清除失败");
+    }
   }
 
   if (loading) {
@@ -165,6 +198,84 @@ export default function MePage() {
             <p className="mt-0.5 text-xs text-slate-400">{card.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Preference memory */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold text-slate-900">🧠 偏好记忆</h2>
+          {prefs && prefs.generation_count > 0 && (
+            <button
+              onClick={clearPrefs}
+              className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-500 hover:bg-rose-50"
+            >
+              清除全部
+            </button>
+          )}
+        </div>
+
+        {!prefs || prefs.generation_count === 0 ? (
+          <p className="mt-3 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+            还没有偏好数据。生成行程后，系统会慢慢记住你的兴趣、节奏和常去地点，
+            下次生成自动参考（可在创建页关闭）。
+          </p>
+        ) : (
+          <>
+            <p className="mt-3 rounded-xl bg-teal-50 px-4 py-3 text-sm leading-relaxed text-teal-800">
+              {prefs.summary}
+            </p>
+
+            {prefs.favorite_places.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-medium text-slate-400">常去地点</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {prefs.favorite_places.map((name) => (
+                    <span
+                      key={name}
+                      className="flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-700"
+                    >
+                      {name}
+                      <button
+                        onClick={() => removePref(name, "favorite")}
+                        className="text-teal-400 hover:text-teal-700"
+                        aria-label={`移除 ${name}`}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {prefs.avoid_places.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-medium text-slate-400">不喜欢/删过</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {prefs.avoid_places.map((name) => (
+                    <span
+                      key={name}
+                      className="flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600"
+                    >
+                      {name}
+                      <button
+                        onClick={() => removePref(name, "avoid")}
+                        className="text-rose-400 hover:text-rose-700"
+                        aria-label={`移除 ${name}`}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <p className="mt-3 text-[11px] text-slate-400">
+              已学习 {prefs.generation_count} 次生成 · 偏好数据仅用于个性化推荐
+            </p>
+          </>
+        )}
       </div>
 
       {/* Menu */}
