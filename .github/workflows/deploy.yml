@@ -20,7 +20,10 @@ jobs:
         with:
           node-version: 20
       - name: Check credentials
-        if: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID == '' || secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET == '' }}
+        env:
+          ALI_AK_ID: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID }}
+          ALI_AK_SECRET: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}
+        if: env.ALI_AK_ID == '' || env.ALI_AK_SECRET == ''
         run: |
           echo "::error::请先在仓库 Settings -> Secrets 配置 ALIBABA_CLOUD_ACCESS_KEY_ID 和 ALIBABA_CLOUD_ACCESS_KEY_SECRET"
           exit 1
