@@ -12,6 +12,14 @@ export interface TokenResponse {
   user: User;
 }
 
+export interface UserStats {
+  trip_count: number;
+  total_budget: number;
+  total_spent: number;
+  total_places: number;
+  member_days: number;
+}
+
 export interface Place {
   id: number;
   amap_id: string | null;

@@ -10,6 +10,7 @@ import type {
   TripExpenseSummary,
   TripWeather,
   User,
+  UserStats,
 } from "@/lib/types";
 
 // 同源代理：所有请求走 Vercel 的 /api/* 路由，避免浏览器直连后端跨域/网络问题
@@ -176,6 +177,12 @@ export const authApi = {
       body: JSON.stringify({ email, password }),
     }),
   me: () => apiFetch<User>("/api/auth/me"),
+  meStats: () => apiFetch<UserStats>("/api/auth/me/stats"),
+  updateMe: (nickname: string) =>
+    apiFetch<User>("/api/auth/me", {
+      method: "PUT",
+      body: JSON.stringify({ nickname }),
+    }),
 };
 
 export const tripApi = {

@@ -29,3 +29,14 @@ class Token(BaseModel):
     token_type: str = "bearer"
     user: UserOut
 
+
+class UserUpdate(BaseModel):
+    nickname: str = Field(min_length=1, max_length=64)
+
+
+class UserStatsOut(BaseModel):
+    trip_count: int
+    total_budget: float
+    total_spent: float
+    total_places: int
+    member_days: int

@@ -33,7 +33,7 @@ export default function MobileBottomNav() {
       highlight: true,
     },
     {
-      href: "/my-trips",
+      href: "/me",
       label: "我的",
       icon: (
         <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">

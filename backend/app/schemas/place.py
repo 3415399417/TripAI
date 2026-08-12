@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+import json
+
+from pydantic import BaseModel, field_validator
 
 
 class PlaceOut(BaseModel):
@@ -19,6 +21,18 @@ class PlaceOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @field_validator("photos", mode="before")
+    @classmethod
+    def _parse_photos(cls, value):
+        """DB stores photos as a JSON string; normalize to a list."""
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                return parsed if isinstance(parsed, list) else None
+            except (ValueError, TypeError):
+                return None
+        return value
+
 
 class PlaceSearchResult(BaseModel):
     id: int | None
@@ -35,3 +49,14 @@ class PlaceSearchResult(BaseModel):
     opening_hours: str | None = None
     phone: str | None = None
     photos: list[str] | None = None
+
+    @field_validator("photos", mode="before")
+    @classmethod
+    def _parse_photos(cls, value):
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                return parsed if isinstance(parsed, list) else None
+            except (ValueError, TypeError):
+                return None
+        return value
