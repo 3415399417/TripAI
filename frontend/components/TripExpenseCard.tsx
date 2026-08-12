@@ -75,7 +75,7 @@ export default function TripExpenseCard({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="card p-5">
       <h2 className="text-base font-bold text-slate-900">💰 真实花费记账</h2>
 
       <div className="mt-3 grid grid-cols-3 gap-2 text-center">

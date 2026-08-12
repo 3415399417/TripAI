@@ -38,7 +38,7 @@ export default function RootLayout({
         <PwaRegister />
         <Navbar />
         <MobileBottomNav />
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 pb-20 sm:px-6 lg:px-8 lg:pb-6">
+        <main className="mx-auto w-full max-w-6xl px-4 py-6 pb-24 sm:px-6 lg:px-8 lg:pb-10">
           {children}
         </main>
       </body>

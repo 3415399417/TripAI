@@ -43,7 +43,7 @@ export default function PlaceCard({
 
   if (!item) {
     return (
-      <div className="flex h-full items-center justify-center rounded-2xl border border-slate-200 bg-white p-8">
+      <div className="card flex h-full items-center justify-center p-8">
         <div className="text-center">
           <p className="text-3xl">📍</p>
           <p className="mt-3 text-sm text-slate-500">
@@ -66,7 +66,7 @@ export default function PlaceCard({
       : null;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="card p-5">
       {photos?.[0] && (
         <img
           src={photos[0]}

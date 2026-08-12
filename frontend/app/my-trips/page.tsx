@@ -41,12 +41,12 @@ export default function MyTripsPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">我的旅行</h1>
+          <h1 className="page-header">我的旅行</h1>
           <p className="mt-1 text-sm text-slate-500">管理你所有的旅行计划</p>
         </div>
         <Link
           href="/trips/new"
-          className="rounded-xl bg-teal-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-teal-700"
+          className="rounded-full bg-gradient-to-r from-teal-600 to-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-teal-600/25 transition hover:opacity-90"
         >
           + 新建旅行
         </Link>
@@ -57,7 +57,7 @@ export default function MyTripsPage() {
       ) : error ? (
         <p className="mt-10 text-center text-sm text-rose-600">{error}</p>
       ) : trips.length === 0 ? (
-        <div className="mt-10 rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
+        <div className="mt-10 rounded-3xl border border-dashed border-slate-300 bg-white/60 p-12 text-center">
           <p className="text-4xl">🧳</p>
           <p className="mt-4 font-medium text-slate-600">还没有旅行计划</p>
           <p className="mt-1 text-sm text-slate-400">
@@ -75,26 +75,27 @@ export default function MyTripsPage() {
           {trips.map((t) => (
             <div
               key={t.id}
-              className="group card overflow-hidden transition hover:shadow-md"
+              className="group card card-interactive overflow-hidden"
             >
               <Link href={`/trips/${t.id}`}>
-                <div className="flex h-20 items-start justify-between bg-gradient-to-br from-teal-500 via-emerald-500 to-cyan-600 px-4 py-3">
+                <div className="flex h-24 items-start justify-between bg-gradient-to-br from-teal-500 via-emerald-500 to-cyan-600 px-5 py-4">
                   <div>
-                    <span className="text-lg font-bold text-white">
+                    <span className="text-xl font-extrabold text-white">
                       {t.destination}
                     </span>
                     <p className="mt-0.5 text-xs text-white/80">
                       {t.start_date.slice(0, 10)} ~ {t.end_date.slice(0, 10)}
                     </p>
                   </div>
+                  <span className="text-2xl opacity-70">🗺️</span>
                   {t.consumption_level && (
-                    <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold text-white">
+                    <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
                       {t.consumption_level}
                     </span>
                   )}
                 </div>
-                <div className="p-4">
-                  <h3 className="font-bold text-slate-900 group-hover:text-teal-700">
+                <div className="p-5">
+                  <h3 className="font-bold text-slate-900 transition group-hover:text-teal-700">
                     {t.title}
                   </h3>
                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs">
@@ -115,7 +116,7 @@ export default function MyTripsPage() {
                   </div>
                 </div>
               </Link>
-              <div className="mx-4 mb-4 flex gap-2 border-t border-slate-100 pt-3">
+              <div className="mx-5 mb-5 flex gap-2 border-t border-slate-100 pt-3">
                 <Link
                   href={`/trips/${t.id}`}
                   className="flex-1 rounded-lg border border-slate-200 py-1.5 text-center text-sm font-medium text-slate-600 hover:bg-slate-50"

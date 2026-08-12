@@ -231,27 +231,41 @@ export default function TripPlannerPage() {
   return (
     <div className="space-y-4 lg:pb-0">
       {/* Header */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="break-words text-2xl font-bold text-slate-900">
-              {trip.title}
-            </h1>
-            <div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-500">
-              <span>📍 {trip.destination}</span>
-              <span>· {trip.start_date.slice(0, 10)} ~ {trip.end_date.slice(0, 10)}</span>
-              <span>· {trip.travelers} 人</span>
-              <span>· 预算 ¥{trip.budget}</span>
-              <span>· 节奏：{trip.pace}</span>
-            </div>
+      <div className="card overflow-hidden">
+        <div className="relative bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-5 py-6 text-white">
+          <div className="pointer-events-none absolute -right-4 -top-6 select-none text-8xl opacity-15">
+            ✈️
           </div>
+          <p className="text-xs font-medium text-teal-100">行程详情</p>
+          <h1 className="mt-1 break-words text-2xl font-extrabold sm:text-3xl">
+              {trip.title}
+          </h1>
+          <div className="mt-3 flex flex-wrap gap-2 text-sm text-white/90">
+            <span className="rounded-full bg-white/15 px-3 py-1 backdrop-blur">
+              📍 {trip.destination}
+            </span>
+            <span className="rounded-full bg-white/15 px-3 py-1 backdrop-blur">
+              📅 {trip.start_date.slice(0, 10)} ~ {trip.end_date.slice(0, 10)}
+            </span>
+            <span className="rounded-full bg-white/15 px-3 py-1 backdrop-blur">
+              👥 {trip.travelers} 人
+            </span>
+            <span className="rounded-full bg-white/15 px-3 py-1 backdrop-blur">
+              💰 ¥{trip.budget}
+            </span>
+            <span className="rounded-full bg-white/15 px-3 py-1 backdrop-blur">
+              🚶 {trip.pace}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
           <div className="flex flex-wrap gap-2">
             {editMode ? (
               <>
                 <button
                   onClick={save}
                   disabled={saving}
-                  className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
+                  className="rounded-full bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-teal-600/25 transition hover:bg-teal-700 disabled:opacity-60"
                 >
                   {saving ? "保存中…" : "保存修改"}
                 </button>
@@ -260,7 +274,7 @@ export default function TripPlannerPage() {
                     setEditMode(false);
                     setItems(trip.schedules);
                   }}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
                 >
                   取消
                 </button>
@@ -269,29 +283,29 @@ export default function TripPlannerPage() {
               <>
                 <button
                   onClick={() => setEditMode(true)}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:border-teal-300 hover:bg-teal-50/60"
                 >
                   ✏️ 编辑行程
                 </button>
                 <button
                   onClick={() => setShareOpen(true)}
-                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+                  className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-700"
                 >
                   🎴 分享旅行
                 </button>
               </>
             )}
           </div>
+          {(notice || error) && (
+            <div
+              className={`w-full rounded-xl px-4 py-2.5 text-sm ${
+                error ? "bg-rose-50 text-rose-600" : "bg-teal-50 text-teal-700"
+              }`}
+            >
+              {error || notice}
+            </div>
+          )}
         </div>
-        {(notice || error) && (
-          <div
-            className={`mt-3 rounded-xl px-4 py-2.5 text-sm ${
-              error ? "bg-rose-50 text-rose-600" : "bg-teal-50 text-teal-700"
-            }`}
-          >
-            {error || notice}
-          </div>
-        )}
       </div>
 
       {/* Trip weather — right below the header card */}

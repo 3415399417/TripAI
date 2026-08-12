@@ -85,7 +85,7 @@ export default function ItineraryList({
       {days.map(([day, list]) => (
         <section
           key={day}
-          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+          className="card overflow-hidden"
         >
           <button
             onClick={() => toggleDay(day)}

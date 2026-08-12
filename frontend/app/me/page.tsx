@@ -128,7 +128,7 @@ export default function MePage() {
   return (
     <div className="space-y-5">
       {/* Profile header */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="card overflow-hidden">
         <div className="h-24 bg-gradient-to-r from-teal-500 via-emerald-500 to-cyan-600" />
         <div className="px-5 pb-5">
           <div className="-mt-10 flex items-end justify-between">
@@ -189,7 +189,7 @@ export default function MePage() {
         {statsCards.map((card) => (
           <div
             key={card.label}
-            className="rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm"
+            className="card p-4 text-center"
           >
             <p className="text-xl">{card.icon}</p>
             <p className="mt-1.5 text-base font-bold text-slate-900">
@@ -201,7 +201,7 @@ export default function MePage() {
       </div>
 
       {/* Preference memory */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="card p-5">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-slate-900">🧠 偏好记忆</h2>
           {prefs && prefs.generation_count > 0 && (
@@ -279,7 +279,7 @@ export default function MePage() {
       </div>
 
       {/* Menu */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="card overflow-hidden">
         <Link
           href="/my-trips"
           className="flex items-center justify-between border-b border-slate-100 px-5 py-4 transition hover:bg-slate-50"

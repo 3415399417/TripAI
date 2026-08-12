@@ -16,7 +16,7 @@ export default function TripWeatherCard({
 }: TripWeatherCardProps) {
   if (loading) {
     return (
-      <div className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm">
+      <div className="card border-sky-100 p-4">
         <h3 className="text-sm font-bold text-slate-900">☀️ 行程天气</h3>
         <p className="mt-3 text-xs text-slate-400">天气加载中…</p>
       </div>
@@ -29,7 +29,7 @@ export default function TripWeatherCard({
   const hasRealWeather = days.length > 0;
 
   return (
-    <div className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm">
+    <div className="card border-sky-100 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-900">
           ☀️ 行程天气

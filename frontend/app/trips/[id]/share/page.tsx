@@ -80,7 +80,10 @@ export default function SharePage() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl bg-gradient-to-r from-teal-600 to-emerald-600 p-6 text-white shadow-md">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-600 to-emerald-600 p-6 text-white shadow-xl shadow-teal-600/20">
+        <div className="pointer-events-none absolute -right-6 -top-6 select-none text-8xl opacity-15">
+          ✈️
+        </div>
         <p className="text-sm text-teal-100">TripAI 旅行分享</p>
         <h1 className="mt-1 text-3xl font-extrabold">{trip.title}</h1>
         <div className="mt-3 flex flex-wrap gap-3 text-sm text-teal-50">
