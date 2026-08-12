@@ -2,15 +2,23 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ItineraryList from "@/components/ItineraryList";
 import MapView from "@/components/MapView";
 import PlaceCard from "@/components/PlaceCard";
+import ShareCardModal from "@/components/ShareCardModal";
 import TripBudgetCard from "@/components/TripBudgetCard";
+import TripExpenseCard from "@/components/TripExpenseCard";
 import TripAlternativesCard from "@/components/TripAlternativesCard";
-import TripGenerationCard from "@/components/TripGenerationCard";
+import TripWeatherCard from "@/components/TripWeatherCard";
 import { ApiError, getToken, tripApi } from "@/lib/api";
-import type { Place, ScheduleItem, Trip } from "@/lib/types";
+import type {
+  Place,
+  ScheduleItem,
+  Trip,
+  TripWeather,
+  TripWeatherDay,
+} from "@/lib/types";
 
 const MOBILE_TABS = [
   { key: "itinerary", label: "行程" },
@@ -33,10 +41,11 @@ export default function TripPlannerPage() {
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [optimizing, setOptimizing] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [weather, setWeather] = useState<TripWeather | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
 
   useEffect(() => {
     if (!getToken()) {
@@ -63,7 +72,35 @@ export default function TripPlannerPage() {
       .finally(() => setLoading(false));
   }, [tripId, router]);
 
+  useEffect(() => {
+    if (!trip) return;
+    let cancelled = false;
+    setWeatherLoading(true);
+    tripApi
+      .getWeather(trip.id)
+      .then((w) => {
+        if (!cancelled) setWeather(w);
+      })
+      .catch(() => {
+        if (!cancelled) setWeather(null);
+      })
+      .finally(() => {
+        if (!cancelled) setWeatherLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [trip?.id]);
+
   const selected = items.find((it) => it.id === selectedId) ?? null;
+
+  const dayWeather = useMemo(() => {
+    const map: Record<number, TripWeatherDay> = {};
+    (weather?.days ?? []).forEach((d) => {
+      map[d.day] = d;
+    });
+    return map;
+  }, [weather]);
 
   function applyTrip(t: Trip) {
     setTrip(t);
@@ -166,33 +203,6 @@ export default function TripPlannerPage() {
     }
   }
 
-  async function reoptimize() {
-    setOptimizing(true);
-    setError("");
-    setNotice("");
-    try {
-      const res = await tripApi.reoptimize(tripId);
-      applyTrip(res.trip);
-      setEditMode(false);
-      setNotice("AI 已重新优化路线 ✓");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "优化失败");
-    } finally {
-      setOptimizing(false);
-    }
-  }
-
-  async function copyShareLink() {
-    const url = `${window.location.origin}/trips/${tripId}/share`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setNotice(`复制失败，请手动复制：${url}`);
-    }
-  }
-
   if (loading) {
     return <p className="mt-16 text-center text-sm text-slate-400">加载中…</p>;
   }
@@ -264,17 +274,10 @@ export default function TripPlannerPage() {
                   ✏️ 编辑行程
                 </button>
                 <button
-                  onClick={reoptimize}
-                  disabled={optimizing}
-                  className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100 disabled:opacity-60"
-                >
-                  {optimizing ? "优化中…" : "✨ AI 重新优化"}
-                </button>
-                <button
-                  onClick={copyShareLink}
+                  onClick={() => setShareOpen(true)}
                   className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
                 >
-                  {copied ? "已复制 ✓" : "分享旅行"}
+                  🎴 分享旅行
                 </button>
               </>
             )}
@@ -291,14 +294,21 @@ export default function TripPlannerPage() {
         )}
       </div>
 
+      {/* Trip weather — right below the header card */}
+      <TripWeatherCard
+        data={weather}
+        loading={weatherLoading}
+        fallback={trip.weather}
+      />
+
       {/* AI budget plan */}
       <TripBudgetCard trip={trip} />
 
+      {/* Real spend tracking */}
+      <TripExpenseCard tripId={trip.id} budget={trip.budget} />
+
       {/* AI alternatives */}
       <TripAlternativesCard trip={trip} />
-
-      {/* AI generation report */}
-      <TripGenerationCard trip={trip} />
 
       {/* Mobile: segmented tabs */}
       <div className="sticky top-16 z-30 -mx-4 border-b border-slate-200 bg-white/95 px-4 py-2 backdrop-blur lg:hidden">
@@ -323,6 +333,7 @@ export default function TripPlannerPage() {
       <div className="space-y-4 lg:hidden">
         <div className={mobileTab === "itinerary" ? "block" : "hidden"}>
           <ItineraryList
+            key={trip.id}
             items={items}
             selectedId={selectedId}
             editMode={editMode}
@@ -331,6 +342,7 @@ export default function TripPlannerPage() {
             onRemove={removeItem}
             onAddPlace={addPlace}
             destination={trip.destination}
+            dayWeather={dayWeather}
           />
         </div>
         <div className={mobileTab === "map" ? "block" : "hidden"}>
@@ -359,6 +371,7 @@ export default function TripPlannerPage() {
       <div className="hidden grid-cols-1 gap-4 lg:grid lg:grid-cols-12">
         <div className="max-h-[70vh] overflow-y-auto pr-1 lg:col-span-4">
           <ItineraryList
+            key={trip.id}
             items={items}
             selectedId={selectedId}
             editMode={editMode}
@@ -367,6 +380,7 @@ export default function TripPlannerPage() {
             onRemove={removeItem}
             onAddPlace={addPlace}
             destination={trip.destination}
+            dayWeather={dayWeather}
           />
         </div>
 
@@ -416,6 +430,12 @@ export default function TripPlannerPage() {
           </div>
         </div>
       )}
+
+      <ShareCardModal
+        trip={trip}
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+      />
     </div>
   );
 }

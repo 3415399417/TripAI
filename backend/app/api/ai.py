@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
+from typing import Callable
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -165,11 +168,11 @@ def _score_plan(result, payload) -> dict:
     }
 
 
-@router.post("/generate-trip", response_model=AIGenerateResponse)
-def generate_trip(
+def _run_generation(
+    db: Session,
+    user: User,
     payload: TripCreate,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    on_stage: Callable[[str, str], None] | None = None,
 ) -> AIGenerateResponse:
     days = (payload.end_date - payload.start_date).days + 1
     if days < 1:
@@ -187,6 +190,9 @@ def generate_trip(
     db.add(trip)
     db.commit()
     db.refresh(trip)
+
+    if on_stage:
+        on_stage("budget", "正在分析目的地消费水平与预算等级…")
 
     llm_seconds = 0.0
     save_seconds = 0.0
@@ -210,6 +216,8 @@ def generate_trip(
         return new_result
 
     try:
+        if on_stage:
+            on_stage("llm", "AI 正在规划每日行程，约需 30-60 秒，请稍候…")
         t_llm = time.time()
         result = ai_service.generate_itinerary(payload)
         llm_seconds += time.time() - t_llm
@@ -218,6 +226,8 @@ def generate_trip(
             db, trip, result, city_hint=payload.destination
         )
         save_seconds += time.time() - t_save
+        if on_stage:
+            on_stage("verify", "正在核对地点真实性、优化路线…")
 
         # 质量评分检查
         ok, quality_feedback = _tier_quality_check(result, payload)
@@ -265,6 +275,8 @@ def generate_trip(
 
     # 消费等级/预算区间/分配由专家知识库确定性计算并覆盖 AI 输出，
     # AI 只负责生成符合该等级的地点。
+    if on_stage:
+        on_stage("finalize", "正在生成预算方案与备选推荐…")
     plan = ai_service.compute_budget_plan(payload)
     result.traveler_profile = plan["profile"]
     result.consumption_level = plan["level"]
@@ -325,6 +337,9 @@ def generate_trip(
     )
     db.commit()
 
+    if on_stage:
+        on_stage("done", "行程已生成 ✓")
+
     mock = not settings.LLM_API_KEY
     return AIGenerateResponse(
         trip=TripOut.from_trip(trip),
@@ -332,6 +347,67 @@ def generate_trip(
         message="行程已生成（当前为示例数据，配置 LLM_API_KEY 后由 AI 生成真实行程）"
         if mock
         else "行程已生成",
+    )
+
+
+@router.post("/generate-trip", response_model=AIGenerateResponse)
+def generate_trip(
+    payload: TripCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AIGenerateResponse:
+    return _run_generation(db, user, payload)
+
+
+@router.post("/generate-trip-stream")
+def generate_trip_stream(
+    payload: TripCreate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """SSE variant of generate-trip: emits stage progress then the result."""
+
+    def event_stream():
+        import queue
+
+        events: "queue.Queue[str | None]" = queue.Queue()
+
+        def emit(event: str, data: dict) -> None:
+            events.put(
+                f"event: {event}\n"
+                f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+            )
+
+        def worker() -> None:
+            try:
+                response = _run_generation(
+                    db,
+                    user,
+                    payload,
+                    on_stage=lambda stage, message: emit(
+                        "stage", {"stage": stage, "message": message}
+                    ),
+                )
+            except HTTPException as exc:
+                emit("error", {"detail": exc.detail})
+            except Exception as exc:  # pragma: no cover - defensive
+                emit("error", {"detail": f"生成失败: {exc}"})
+            else:
+                emit("result", response.model_dump(mode="json"))
+            finally:
+                events.put(None)
+
+        threading.Thread(target=worker, daemon=True).start()
+        while True:
+            item = events.get()
+            if item is None:
+                break
+            yield item
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 

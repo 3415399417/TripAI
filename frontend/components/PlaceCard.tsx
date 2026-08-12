@@ -1,6 +1,8 @@
 "use client";
 
-import type { ScheduleItem } from "@/lib/types";
+import { useEffect, useState } from "react";
+import { placeApi } from "@/lib/api";
+import type { Place, ScheduleItem } from "@/lib/types";
 
 interface PlaceCardProps {
   item: ScheduleItem | null;
@@ -19,6 +21,26 @@ export default function PlaceCard({
   onUpdate,
   onViewOnMap,
 }: PlaceCardProps) {
+  const [detail, setDetail] = useState<Place | null>(null);
+  const currentPlace = item?.place ?? null;
+
+  useEffect(() => {
+    setDetail(null);
+    if (!currentPlace) return;
+    let cancelled = false;
+    placeApi
+      .getDetail(currentPlace.id)
+      .then((d) => {
+        if (!cancelled) setDetail(d);
+      })
+      .catch(() => {
+        if (!cancelled) setDetail(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPlace?.id]);
+
   if (!item) {
     return (
       <div className="flex h-full items-center justify-center rounded-2xl border border-slate-200 bg-white p-8">
@@ -33,8 +55,26 @@ export default function PlaceCard({
   }
 
   const { place } = item;
+  const hours = detail?.opening_hours ?? place.opening_hours;
+  const phone = detail?.phone ?? place.phone;
+  const photos = detail?.photos ?? place.photos;
+  const navUrl =
+    place.latitude && place.longitude
+      ? `https://uri.amap.com/navigation?to=${place.longitude},${place.latitude},${encodeURIComponent(
+          place.name
+        )}&mode=car&callnative=1&src=tripai`
+      : null;
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {photos?.[0] && (
+        <img
+          src={photos[0]}
+          alt={place.name}
+          className="mb-4 h-36 w-full rounded-xl object-cover"
+          loading="lazy"
+        />
+      )}
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-bold text-slate-900">{place.name}</h3>
@@ -53,6 +93,16 @@ export default function PlaceCard({
       >
         📍 在地图中查看位置
       </button>
+      {navUrl && (
+        <a
+          href={navUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 block w-full rounded-xl border border-slate-200 bg-white py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        >
+          🧭 去这里（导航）
+        </a>
+      )}
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <Info label="建议时间" value={item.recommended_time ?? "—"} />
@@ -63,6 +113,10 @@ export default function PlaceCard({
         <Info label="人均花费" value={`约 ¥${item.cost_estimate}`} />
         <Info label="交通方式" value={item.transport ?? "—"} />
         {place.rating ? <Info label="评分" value={`${place.rating} 分`} /> : null}
+        {hours ? <Info label="营业时间" value={hours} /> : null}
+        {phone ? (
+          <Info label="电话" value={phone} />
+        ) : null}
         {place.address ? (
           <div className="col-span-2">
             <dt className="text-xs font-medium text-slate-400">地址</dt>

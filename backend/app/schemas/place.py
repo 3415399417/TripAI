@@ -13,6 +13,9 @@ class PlaceOut(BaseModel):
     rating: float | None
     cost: float | None
     image_url: str | None
+    opening_hours: str | None = None
+    phone: str | None = None
+    photos: list[str] | None = None
 
     model_config = {"from_attributes": True}
 
@@ -29,3 +32,6 @@ class PlaceSearchResult(BaseModel):
     rating: float | None
     cost: float | None
     image_url: str | None
+    opening_hours: str | None = None
+    phone: str | None = None
+    photos: list[str] | None = None

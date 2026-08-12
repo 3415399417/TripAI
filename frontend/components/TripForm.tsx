@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { tripApi } from "@/lib/api";
 import type { TripCreate } from "@/lib/types";
@@ -35,6 +35,13 @@ const STYLE_OPTIONS = [
 
 const GROUP_OPTIONS = ["成人", "老人", "儿童", "情侣"];
 
+const PROGRESS_STEPS = [
+  { key: "budget", label: "预算分析" },
+  { key: "llm", label: "AI 规划行程" },
+  { key: "verify", label: "地点核对" },
+  { key: "finalize", label: "生成方案" },
+];
+
 interface TripFormProps {
   initialDestination?: string;
   initialInterests?: string[];
@@ -56,6 +63,16 @@ export default function TripForm({
   const [travelerGroup, setTravelerGroup] = useState("成人");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [progress, setProgress] = useState("");
+  const [stage, setStage] = useState("");
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!loading) return;
+    setElapsed(0);
+    const timer = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, [loading]);
 
   function toggleInterest(tag: string) {
     setInterests((prev) =>
@@ -83,8 +100,13 @@ export default function TripForm({
     };
 
     setLoading(true);
+    setProgress("");
+    setStage("");
     try {
-      const res = await tripApi.generate(payload);
+      const res = await tripApi.generateStream(payload, (s, message) => {
+        setStage(s);
+        setProgress(message);
+      });
       router.push(`/trips/${res.trip.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "生成失败，请稍后重试");
@@ -288,6 +310,48 @@ export default function TripForm({
           {error}
         </p>
       )}
+
+      {loading && (
+        <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
+          <div className="flex items-center gap-3">
+            {PROGRESS_STEPS.map((step, idx) => {
+              const currentIdx = PROGRESS_STEPS.findIndex((s) => s.key === stage);
+              const done = currentIdx > idx || stage === "done";
+              const active = currentIdx === idx;
+              return (
+                <div key={step.key} className="flex flex-1 flex-col items-center gap-1">
+                  <span
+                    className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${
+                      done
+                        ? "bg-teal-600 text-white"
+                        : active
+                          ? "border-2 border-teal-600 text-teal-700"
+                          : "bg-slate-200 text-slate-400"
+                    }`}
+                  >
+                    {done ? "✓" : idx + 1}
+                  </span>
+                  <span
+                    className={`text-[10px] ${
+                      done || active ? "text-teal-700" : "text-slate-400"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-3 flex items-center gap-2 text-sm font-medium text-teal-800">
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" />
+            {progress || "AI 正在规划行程…"}
+          </p>
+          <p className="mt-1 text-xs text-teal-500">
+            已用时 {elapsed} 秒 · 全程通常需要 30~90 秒，生成后会自动跳转
+          </p>
+        </div>
+      )}
+
       <button
         type="submit"
         disabled={loading}

@@ -1,0 +1,30 @@
+name: Deploy to Alibaba Cloud FC
+
+# 说明（先看这里）：
+# 1. 在 GitHub 仓库 Settings -> Secrets and variables -> Actions 里添加：
+#    ALIBABA_CLOUD_ACCESS_KEY_ID / ALIBABA_CLOUD_ACCESS_KEY_SECRET
+# 2. 把你本地可用的部署配置（不含密钥的 s.yaml / s-web.yaml）放到仓库 deploy/fc/ 目录，
+#    密钥改用 GitHub Secrets 注入环境变量。参考本机 work/fc-deploy/ 与 work/fc-web-deploy/。
+# 3. 配置好后在 Actions 页面手动触发本工作流（workflow_dispatch）。
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy backend + frontend
+    runs-on: ubuntu-latest
+    if: ${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID != '' && secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Serverless Devs
+        run: npm install -g @serverless-devs/s
+      - name: Configure credentials
+        run: s config add --AccessKeyID "${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_ID }}" --AccessKeySecret "${{ secrets.ALIBABA_CLOUD_ACCESS_KEY_SECRET }}" -a tripai
+      - name: Deploy with s.yaml
+        if: hashFiles('deploy/fc/s.yaml') != ''
+        working-directory: deploy/fc
+        run: s deploy -y -a tripai

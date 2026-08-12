@@ -23,6 +23,9 @@ export interface Place {
   longitude: number;
   rating: number | null;
   image_url: string | null;
+  opening_hours: string | null;
+  phone: string | null;
+  photos: string[] | null;
 }
 
 export interface ScheduleItem {
@@ -100,4 +103,46 @@ export interface AIGenerateResponse {
   trip: Trip;
   mock: boolean;
   message: string;
+}
+
+export interface TripLiveWeather {
+  weather: string;
+  temperature: string;
+  humidity?: string;
+  report_time?: string;
+}
+
+export interface TripWeatherDay {
+  date: string;
+  day: number;
+  weather: string;
+  temp_min: string;
+  temp_max: string;
+}
+
+export interface TripWeather {
+  destination: string;
+  start_date: string;
+  end_date: string;
+  days: TripWeatherDay[];
+  live: TripLiveWeather | null;
+  within_window: boolean;
+  fallback: string | null;
+}
+
+export interface TripExpense {
+  id: number;
+  trip_id: number;
+  day: number | null;
+  category: string;
+  description: string | null;
+  amount: number;
+  created_at: string;
+}
+
+export interface TripExpenseSummary {
+  budget: number;
+  spent: number;
+  remaining: number;
+  items: TripExpense[];
 }

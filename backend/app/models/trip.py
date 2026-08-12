@@ -54,6 +54,11 @@ class Trip(Base):
         cascade="all, delete-orphan",
         order_by="Schedule.day, Schedule.order_index",
     )
+    expenses: Mapped[list[TripExpense]] = relationship(
+        back_populates="trip",
+        cascade="all, delete-orphan",
+        order_by="TripExpense.day.asc().nullsfirst(), TripExpense.id.desc()",
+    )
 
 
 class Schedule(Base):
@@ -76,3 +81,23 @@ class Schedule(Base):
 
     trip: Mapped[Trip] = relationship(back_populates="schedules")
     place: Mapped[Place] = relationship()
+
+
+class TripExpense(Base):
+    """One real-spending record user adds while / after the trip."""
+
+    __tablename__ = "trip_expenses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[int] = mapped_column(
+        ForeignKey("trips.id", ondelete="CASCADE"), index=True
+    )
+    day: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    category: Mapped[str] = mapped_column(String(32), default="其他")
+    description: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    amount: Mapped[float] = mapped_column(Float, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    trip: Mapped[Trip] = relationship(back_populates="expenses")

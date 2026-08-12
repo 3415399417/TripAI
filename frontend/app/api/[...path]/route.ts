@@ -26,15 +26,13 @@ async function proxy(req: NextRequest, method: string, ctx: RouteCtx) {
     body,
     signal: AbortSignal.timeout(55_000),
   });
-  const text = await res.text();
-
-  return new NextResponse(text, {
-    status: res.status,
-    headers: {
-      "content-type": res.headers.get("content-type") ?? "application/json",
-      "cache-control": "no-store",
-    },
-  });
+  const responseHeaders = new Headers();
+  responseHeaders.set(
+    "content-type",
+    res.headers.get("content-type") ?? "application/json"
+  );
+  responseHeaders.set("cache-control", "no-store");
+  return new Response(res.body, { status: res.status, headers: responseHeaders });
 }
 
 export const GET = (req: NextRequest, ctx: RouteCtx) => proxy(req, "GET", ctx);

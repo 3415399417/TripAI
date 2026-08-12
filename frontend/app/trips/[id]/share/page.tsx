@@ -5,8 +5,9 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import ItineraryList from "@/components/ItineraryList";
 import MapView from "@/components/MapView";
+import TripWeatherCard from "@/components/TripWeatherCard";
 import { tripApi } from "@/lib/api";
-import type { Trip } from "@/lib/types";
+import type { Trip, TripWeather, TripWeatherDay } from "@/lib/types";
 
 export default function SharePage() {
   const params = useParams<{ id: string }>();
@@ -14,6 +15,8 @@ export default function SharePage() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [weather, setWeather] = useState<TripWeather | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
 
   useEffect(() => {
     tripApi
@@ -22,6 +25,26 @@ export default function SharePage() {
       .catch((e) => setError(e instanceof Error ? e.message : "分享页不存在"))
       .finally(() => setLoading(false));
   }, [tripId]);
+
+  useEffect(() => {
+    if (!trip) return;
+    let cancelled = false;
+    setWeatherLoading(true);
+    tripApi
+      .getPublicWeather(trip.id)
+      .then((w) => {
+        if (!cancelled) setWeather(w);
+      })
+      .catch(() => {
+        if (!cancelled) setWeather(null);
+      })
+      .finally(() => {
+        if (!cancelled) setWeatherLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [trip?.id]);
 
   const mapPlaces = useMemo(
     () =>
@@ -35,6 +58,14 @@ export default function SharePage() {
       })),
     [trip]
   );
+
+  const dayWeather = useMemo(() => {
+    const map: Record<number, TripWeatherDay> = {};
+    (weather?.days ?? []).forEach((d) => {
+      map[d.day] = d;
+    });
+    return map;
+  }, [weather]);
 
   if (loading) return <p className="mt-16 text-center text-sm text-slate-400">加载中…</p>;
 
@@ -61,6 +92,12 @@ export default function SharePage() {
         </div>
       </div>
 
+      <TripWeatherCard
+        data={weather}
+        loading={weatherLoading}
+        fallback={trip.weather}
+      />
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-7">
           <MapView
@@ -72,6 +109,7 @@ export default function SharePage() {
         </div>
         <div className="max-h-[70vh] overflow-y-auto pr-1 lg:col-span-5">
           <ItineraryList
+            key={trip.id}
             items={trip.schedules}
             selectedId={null}
             editMode={false}
@@ -80,6 +118,7 @@ export default function SharePage() {
             onRemove={() => {}}
             onAddPlace={() => {}}
             destination={trip.destination}
+            dayWeather={dayWeather}
           />
         </div>
       </div>

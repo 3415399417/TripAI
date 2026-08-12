@@ -113,6 +113,16 @@ def _apply_light_migrations() -> None:
             if "cost" not in place_columns:
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE places ADD COLUMN cost FLOAT"))
+            with engine.begin() as conn:
+                for column, ddl in {
+                    "opening_hours": "VARCHAR(512)",
+                    "phone": "VARCHAR(64)",
+                    "photos": "TEXT",
+                }.items():
+                    if column not in place_columns:
+                        conn.execute(
+                            text(f"ALTER TABLE places ADD COLUMN {column} {ddl}")
+                        )
     except Exception:
         # Failures here are non-fatal; app code tolerates missing attributes.
         pass

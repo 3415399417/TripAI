@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Float, String
+from sqlalchemy import Float, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -24,3 +24,6 @@ class Place(Base):
     rating: Mapped[float | None] = mapped_column(Float, nullable=True)
     cost: Mapped[float | None] = mapped_column(Float, nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    opening_hours: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    photos: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array

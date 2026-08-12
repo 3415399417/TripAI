@@ -37,7 +37,7 @@ def reoptimize_itinerary(
         return _mock_reoptimize(trip)
 
     lines = [
-        f"第{s.day}天: "
+        f"第{day[0].day}天: "
         + " -> ".join(
             f"{s.place.name}({s.recommended_time or '全天'})" for s in day
         )

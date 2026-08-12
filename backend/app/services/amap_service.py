@@ -83,6 +83,48 @@ def search_places(query: str, city: str | None = None, limit: int = 5) -> list[d
     return results
 
 
+def fetch_place_detail(amap_id: str) -> dict[str, Any]:
+    """Fetch richer POI detail (opening hours / phone / photos) from AMap."""
+    if not is_configured():
+        raise AMapNotConfigured("后端未配置高德 Web 服务 Key（AMAP_WEB_KEY）")
+    try:
+        resp = httpx.get(
+            "https://restapi.amap.com/v3/place/detail",
+            params={
+                "key": settings.AMAP_WEB_KEY,
+                "id": amap_id,
+                "extensions": "all",
+            },
+            timeout=10,
+        )
+        data = resp.json()
+    except Exception as exc:
+        raise AMapError(f"高德详情请求失败: {exc}") from exc
+    if data.get("status") != "1":
+        raise AMapError(data.get("info", "高德详情失败"))
+
+    pois = data.get("pois") or []
+    if not pois:
+        return {}
+    poi = pois[0]
+    biz_ext = poi.get("biz_ext") or {}
+    business = poi.get("business") or {}
+    hours = (
+        business.get("hours")
+        or biz_ext.get("opening_hours")
+        or biz_ext.get("business_hours")
+    )
+    tel = poi.get("tel")
+    if isinstance(tel, list):
+        tel = tel[0] if tel else None
+    photos = [p.get("url") for p in (poi.get("photos") or []) if p.get("url")]
+    return {
+        "opening_hours": str(hours) if hours else None,
+        "phone": tel or None,
+        "photos": photos[:3] or None,
+    }
+
+
 def _parse_cost(value: Any) -> float | None:
     """Extract a numeric per-capita cost from AMap's biz_ext.cost field."""
     raw = value
