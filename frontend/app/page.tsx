@@ -141,7 +141,7 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3">
         {FEATURES.map((f) => (
           <div
             key={f.title}
@@ -166,7 +166,7 @@ export default function HomePage() {
             </p>
           </div>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3">
           {TEMPLATES.map((t) => (
             <Link
               key={t.city}
