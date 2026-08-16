@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     # 演示项目：允许任意前端来源（配合 Bearer Token 认证，无 Cookie 风险）。
     # 正式商用时可收紧为具体域名列表。
     CORS_ORIGINS: List[str] = ["*"]
+    # 可选：用正则放行动态域名（如 FC 临时域名 *.fc.devsapp.net、*.fcapp.run、*.vercel.app）
+    CORS_ORIGIN_REGEX: str = ""
 
     # LLM provider (OpenAI-compatible /chat/completions)
     LLM_BASE_URL: str = "https://api.deepseek.com/v1"
